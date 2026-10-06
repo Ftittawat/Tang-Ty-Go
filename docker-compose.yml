@@ -1,0 +1,48 @@
+services:
+  tangty-go:
+    image: tangty-go:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tangty-go
+    restart: unless-stopped
+
+    # Values come from the Jenkins environment (credentials()) at `docker compose up` time.
+    environment:
+      APP_PASSWORD: ${APP_PASSWORD}
+      AUTH_SECRET: ${AUTH_SECRET:-}
+      DATA_DIR: /data
+      TZ: Asia/Bangkok
+      NODE_ENV: production
+
+    # Point the existing Cloudflare Tunnel's public hostname at this port.
+    ports:
+      - "3200:3200"
+
+    # Named volume: survives redeploys and the Jenkins workspace clean (git clean -fdx).
+    volumes:
+      - tangty-go-data:/data
+
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+          cpus: "1.0"
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    # /login is public (excluded from the auth proxy).
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3200/login"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  tangty-go-data:
+    driver: local

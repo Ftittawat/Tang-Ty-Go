@@ -1,0 +1,13 @@
+node_modules
+.next
+out
+dist
+data
+.git
+.claude
+.env
+.env.*
+!.env.example
+*.log
+README.md
+Jenkinsfile
