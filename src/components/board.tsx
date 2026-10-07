@@ -1,38 +1,38 @@
 "use client";
 
+import Link from "next/link";
 import { startTransition, useCallback, useMemo, useOptimistic, useState } from "react";
-import { logout, moveTrip } from "@/app/actions";
+import { moveTrip } from "@/app/actions";
 import { TripCard } from "@/components/trip-card";
 import { TripDialog } from "@/components/trip-dialog";
-import { fieldCls, ghostBtn, Logo, primaryBtn } from "@/components/ui";
-import { categoryOf, daysUntil, STATUSES, type Status, type Trip } from "@/lib/trips";
+import { fieldCls, GearIcon, ghostBtn, Logo, primaryBtn } from "@/components/ui";
+import { categoryOf, daysUntil, STATUSES, type Member, type Status, type Trip } from "@/lib/trips";
 
 type DialogState = { trip: Trip | null; status: Status } | null;
 
-export function Board({ trips }: { trips: Trip[] }) {
+export function Board({ trips, members }: { trips: Trip[]; members: Member[] }) {
   const [optimistic, applyMove] = useOptimistic(trips, (cur, m: { id: number; status: Status }) =>
     cur.map((t) => (t.id === m.id ? { ...t, status: m.status } : t)),
   );
   const [query, setQuery] = useState("");
-  const [owner, setOwner] = useState("");
+  const [person, setPerson] = useState("");
   const [dialog, setDialog] = useState<DialogState>(null);
   const [dragId, setDragId] = useState<number | null>(null);
   const [overCol, setOverCol] = useState<Status | null>(null);
 
-  const owners = useMemo(
-    () => [...new Set(trips.map((t) => t.owner).filter((o): o is string => !!o))].sort((a, b) => a.localeCompare(b, "th")),
-    [trips],
-  );
+  const names = useMemo(() => new Map(members.map((m) => [m.id, m.name])), [members]);
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
     return optimistic.filter((t) => {
-      if (owner && t.owner !== owner) return false;
+      const pid = Number(person);
+      if (pid && t.owner_id !== pid && !t.participant_ids.includes(pid)) return false;
       if (!q) return true;
-      return [t.title, t.description, t.location, t.owner, t.participants, categoryOf(t.category).label]
+      const people = [t.owner_id, ...t.participant_ids].map((id) => (id === null ? undefined : names.get(id)));
+      return [t.title, t.description, t.location, categoryOf(t.category).label, ...people]
         .some((f) => f?.toLowerCase().includes(q));
     });
-  }, [optimistic, query, owner]);
+  }, [optimistic, query, person, names]);
 
   const nextTrip = useMemo(
     () =>
@@ -74,9 +74,9 @@ export function Board({ trips }: { trips: Trip[] }) {
               aria-label="ค้นหา"
               className={`${fieldCls} min-w-0 flex-1 sm:w-64 sm:flex-none`}
             />
-            <select value={owner} onChange={(e) => setOwner(e.target.value)} aria-label="กรองตามเจ้าของ" className={`${fieldCls} w-28 shrink-0 sm:w-36`}>
+            <select value={person} onChange={(e) => setPerson(e.target.value)} aria-label="กรองตามคน (เจ้าของหรือคนที่ไป)" className={`${fieldCls} w-28 shrink-0 sm:w-36`}>
               <option value="">ทุกคน</option>
-              {owners.map((o) => <option key={o} value={o}>{o}</option>)}
+              {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
             </select>
           </div>
 
@@ -84,9 +84,9 @@ export function Board({ trips }: { trips: Trip[] }) {
             <button onClick={() => setDialog({ trip: null, status: "todo" })} className={primaryBtn}>
               <span className="text-base leading-none">+</span> เพิ่มทริป
             </button>
-            <form action={logout}>
-              <button className={ghostBtn} title="ออกจากระบบ">ออก</button>
-            </form>
+            <Link href="/settings" className={`${ghostBtn} px-2.5`} title="ตั้งค่า" aria-label="ตั้งค่า">
+              <GearIcon />
+            </Link>
           </div>
         </div>
       </header>
@@ -147,6 +147,7 @@ export function Board({ trips }: { trips: Trip[] }) {
                     <TripCard
                       key={t.id}
                       trip={t}
+                      names={names}
                       dragging={dragId === t.id}
                       onDragStart={() => setDragId(t.id)}
                       onDragEnd={() => {
@@ -159,7 +160,7 @@ export function Board({ trips }: { trips: Trip[] }) {
                   ))}
                   {items.length === 0 && (
                     <p className="rounded-xl border-2 border-dashed border-slate-300/70 px-3 py-6 text-center text-xs text-slate-400">
-                      {query || owner ? "ไม่มีทริปที่ตรงกับการค้นหา" : s.hint}
+                      {query || person ? "ไม่มีทริปที่ตรงกับการค้นหา" : s.hint}
                     </p>
                   )}
                   <button
@@ -180,7 +181,7 @@ export function Board({ trips }: { trips: Trip[] }) {
           key={dialog.trip?.id ?? `new-${dialog.status}`}
           trip={dialog.trip}
           defaultStatus={dialog.status}
-          owners={owners}
+          members={members}
           onClose={closeDialog}
         />
       )}

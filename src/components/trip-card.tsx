@@ -1,8 +1,8 @@
 "use client";
 
-import { Avatar } from "@/components/ui";
+import { Avatar, AvatarStack } from "@/components/ui";
 import {
-  categoryOf, daysUntil, formatDateRange, formatTarget, splitPeople, STATUSES, tripNights, type Trip,
+  categoryOf, daysUntil, formatDateRange, formatTarget, STATUSES, tripNights, type Trip,
 } from "@/lib/trips";
 
 function Countdown({ trip }: { trip: Trip }) {
@@ -24,9 +24,10 @@ function Countdown({ trip }: { trip: Trip }) {
 }
 
 export function TripCard({
-  trip, onOpen, onMove, dragging, onDragStart, onDragEnd,
+  trip, names, onOpen, onMove, dragging, onDragStart, onDragEnd,
 }: {
   trip: Trip;
+  names: Map<number, string>;
   onOpen: () => void;
   onMove: (status: Trip["status"]) => void;
   dragging: boolean;
@@ -37,7 +38,11 @@ export function TripCard({
   const dates = formatDateRange(trip.start_date, trip.end_date);
   const days = tripNights(trip.start_date, trip.end_date);
   const target = formatTarget(trip.target_month, trip.target_year);
-  const people = splitPeople(trip.participants);
+  const owner = trip.owner_id !== null ? names.get(trip.owner_id) : undefined;
+  const people = trip.participant_ids
+    .map((id) => names.get(id))
+    .filter((n): n is string => !!n)
+    .sort((a, b) => a.localeCompare(b, "th"));
   const idx = STATUSES.findIndex((s) => s.id === trip.status);
   const next = STATUSES[idx + 1];
 
@@ -61,7 +66,11 @@ export function TripCard({
         <h3 className={`min-w-0 flex-1 text-sm font-semibold leading-snug break-words ${trip.status === "done" ? "text-slate-600" : ""}`}>
           {trip.title}
         </h3>
-        {trip.owner && <Avatar name={trip.owner} />}
+        {owner && (
+          <span title={`เจ้าของทริป: ${owner}`} className="relative">
+            <Avatar name={owner} />
+          </span>
+        )}
       </div>
 
       {trip.description && <p className="mt-1.5 line-clamp-2 text-xs text-slate-500">{trip.description}</p>}
@@ -91,11 +100,7 @@ export function TripCard({
             ฿{trip.budget.toLocaleString("th-TH")}/คน
           </span>
         )}
-        {people.length > 0 && (
-          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-600" title={people.join(", ")}>
-            👥 {people.length}
-          </span>
-        )}
+        {people.length > 0 && <span className="relative"><AvatarStack names={people} /></span>}
         {trip.link && (
           <a
             href={trip.link}

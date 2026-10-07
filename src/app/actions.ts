@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { checkPassword, createSessionValue, requireAuth, SESSION_COOKIE } from "@/lib/auth";
 import * as store from "@/lib/db";
 import type { TripInput } from "@/lib/db";
-import { isCategory, isStatus, type Status } from "@/lib/trips";
+import { isCategory, isStatus, MEMBER_NAME_MAX, type Status } from "@/lib/trips";
 
 export async function login(_prev: string | null, form: FormData) {
   if (!process.env.APP_PASSWORD) return "ยังไม่ได้ตั้งค่า APP_PASSWORD ในไฟล์ .env";
@@ -67,6 +67,11 @@ function parseTrip(form: FormData): TripInput | string {
   if (target_month !== null && !(target_month >= 1 && target_month <= 12)) return "เดือนเป้าหมายไม่ถูกต้อง";
   if (target_year !== null && !(target_year >= 2000 && target_year <= 2200)) return "ปีเป้าหมายไม่ถูกต้อง";
 
+  const memberIds = new Set(store.listMembers().map((m) => m.id));
+  const owner_id = int(form, "owner_id");
+  if (owner_id !== null && !memberIds.has(owner_id)) return "ไม่พบรายชื่อเจ้าของทริป — ลองรีเฟรชหน้า";
+  const participant_ids = [...new Set(form.getAll("participant_ids").map(Number))].filter((id) => memberIds.has(id));
+
   const budget = int(form, "budget");
   if (budget !== null && !(budget >= 0)) return "งบประมาณต้องเป็นตัวเลข";
 
@@ -90,8 +95,8 @@ function parseTrip(form: FormData): TripInput | string {
     end_date,
     target_month,
     target_year,
-    owner: text(form, "owner", 60),
-    participants: text(form, "participants", 500),
+    owner_id,
+    participant_ids,
     budget,
     link,
   };
@@ -121,4 +126,48 @@ export async function removeTrip(id: number) {
   await requireAuth();
   store.deleteTrip(id);
   revalidatePath("/");
+}
+
+// ---------- members ----------
+
+export type MemberFormState = { ok: boolean; message: string; at: number } | null;
+
+function cleanName(raw: unknown) {
+  return String(raw ?? "").replace(/\s+/g, " ").trim();
+}
+
+export async function addMembers(_prev: MemberFormState, form: FormData): Promise<MemberFormState> {
+  await requireAuth();
+  // Accept several names at once: "ต้น, แบม" or one per line.
+  const names = [...new Set(String(form.get("names") ?? "").split(/[,\n]/).map(cleanName).filter(Boolean))];
+  if (names.length === 0) return { ok: false, message: "ใส่ชื่ออย่างน้อย 1 ชื่อ", at: Date.now() };
+  const tooLong = names.find((n) => n.length > MEMBER_NAME_MAX);
+  if (tooLong) return { ok: false, message: `ชื่อยาวเกิน ${MEMBER_NAME_MAX} ตัวอักษร: ${tooLong}`, at: Date.now() };
+
+  const added = store.addMembers(names);
+  revalidatePath("/", "layout");
+  const skipped = names.length - added;
+  return {
+    ok: added > 0,
+    message: added === 0 ? "มีชื่อนี้อยู่แล้ว" : `เพิ่ม ${added} คนแล้ว${skipped ? ` (ข้าม ${skipped} ชื่อที่มีอยู่แล้ว)` : ""}`,
+    at: Date.now(),
+  };
+}
+
+export async function renameMember(id: number, rawName: string): Promise<string | null> {
+  await requireAuth();
+  const name = cleanName(rawName);
+  if (!name) return "ชื่อห้ามว่าง";
+  if (name.length > MEMBER_NAME_MAX) return `ชื่อยาวเกิน ${MEMBER_NAME_MAX} ตัวอักษร`;
+  const clash = store.listMembers().find((m) => m.id !== id && m.name.toLowerCase() === name.toLowerCase());
+  if (clash) return "มีชื่อนี้อยู่แล้ว";
+  store.renameMember(id, name);
+  revalidatePath("/", "layout");
+  return null;
+}
+
+export async function removeMember(id: number) {
+  await requireAuth();
+  store.deleteMember(id);
+  revalidatePath("/", "layout");
 }

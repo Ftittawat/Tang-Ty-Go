@@ -31,7 +31,8 @@ const AVATAR_COLORS = [
 
 export function Avatar({ name, className = "size-6 text-[11px]" }: { name: string; className?: string }) {
   const hash = [...name].reduce((h, c) => (h * 31 + c.codePointAt(0)!) >>> 0, 7);
-  const initial = [...name.trim()][0]?.toUpperCase() ?? "?";
+  // Skip Thai leading vowels (เ แ โ ใ ไ) so "แบม" shows "บ", not "แ".
+  const initial = [...name.trim()].find((c) => !"เแโใไ".includes(c))?.toUpperCase() ?? "?";
   return (
     <span
       title={name}
@@ -39,5 +40,31 @@ export function Avatar({ name, className = "size-6 text-[11px]" }: { name: strin
     >
       {initial}
     </span>
+  );
+}
+
+export function AvatarStack({ names, max = 4 }: { names: string[]; max?: number }) {
+  const shown = names.slice(0, max);
+  const rest = names.length - shown.length;
+  return (
+    <span className="flex items-center -space-x-1.5" title={names.join(", ")}>
+      {shown.map((n) => (
+        <Avatar key={n} name={n} className="size-6 text-[11px] ring-2 ring-white" />
+      ))}
+      {rest > 0 && (
+        <span className="inline-flex size-6 items-center justify-center rounded-full bg-slate-200 text-[10px] font-semibold text-slate-600 ring-2 ring-white">
+          +{rest}
+        </span>
+      )}
+    </span>
+  );
+}
+
+export function GearIcon({ className = "size-5" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+      <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
+    </svg>
   );
 }

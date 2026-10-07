@@ -2,25 +2,46 @@
 
 import { startTransition, useActionState, useEffect, useRef, useState, useTransition, type FormEvent } from "react";
 import { removeTrip, saveTrip } from "@/app/actions";
-import { dangerBtn, ghostBtn, inputCls, labelCls, primaryBtn } from "@/components/ui";
-import { be, CATEGORIES, MONTHS_TH_FULL, STATUSES, type Status, type Trip } from "@/lib/trips";
+import Link from "next/link";
+import { Avatar, dangerBtn, ghostBtn, inputCls, labelCls, primaryBtn } from "@/components/ui";
+import { be, CATEGORIES, MONTHS_TH_FULL, STATUSES, type Member, type Status, type Trip } from "@/lib/trips";
 
-const OWNER_KEY = "tg_owner";
+const OWNER_KEY = "tg_owner_id";
 
-function rememberedOwner() {
+function rememberedOwner(members: Member[]) {
   try {
-    return localStorage.getItem(OWNER_KEY) ?? "";
+    const id = Number(localStorage.getItem(OWNER_KEY));
+    return members.some((m) => m.id === id) ? id : null;
   } catch {
-    return "";
+    return null;
   }
 }
 
+function MemberChip({ member, selected, onClick }: { member: Member; selected: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={selected}
+      className={`inline-flex items-center gap-1.5 rounded-full border py-1 pl-1 pr-3 text-sm transition ${
+        selected
+          ? "border-sky-500 bg-sky-50 font-medium text-sky-800 ring-1 ring-sky-500"
+          : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+      }`}
+    >
+      <Avatar name={member.name} />
+      {member.name}
+      {selected && <span aria-hidden className="text-sky-600">✓</span>}
+    </button>
+  );
+}
+
 export function TripDialog({
-  trip, defaultStatus, owners, onClose,
+  trip, defaultStatus, members, onClose,
 }: {
   trip: Trip | null;
   defaultStatus: Status;
-  owners: string[];
+  members: Member[];
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -29,7 +50,22 @@ export function TripDialog({
   const [status, setStatus] = useState<Status>(trip?.status ?? defaultStatus);
   const [start, setStart] = useState(trip?.start_date ?? "");
   // Only ever rendered client-side (opened by a click), so reading localStorage here is safe.
-  const [owner, setOwner] = useState(() => trip?.owner ?? rememberedOwner());
+  const [ownerId, setOwnerId] = useState<number | null>(() => (trip ? trip.owner_id : rememberedOwner(members)));
+  const [goers, setGoers] = useState<number[]>(() => {
+    if (trip) return trip.participant_ids;
+    const me = rememberedOwner(members);
+    return me ? [me] : [];
+  });
+
+  const pickOwner = (id: number) => {
+    const next = ownerId === id ? null : id;
+    setOwnerId(next);
+    // The owner is going too, most of the time.
+    if (next !== null) setGoers((g) => (g.includes(next) ? g : [...g, next]));
+  };
+  const toggleGoer = (id: number) =>
+    setGoers((g) => (g.includes(id) ? g.filter((x) => x !== id) : [...g, id]));
+  const allGoing = members.length > 0 && members.every((m) => goers.includes(m.id));
 
   useEffect(() => {
     ref.current?.showModal();
@@ -50,7 +86,7 @@ export function TripDialog({
     e.preventDefault();
     const data = new FormData(e.currentTarget);
     try {
-      if (owner.trim()) localStorage.setItem(OWNER_KEY, owner.trim());
+      if (ownerId !== null) localStorage.setItem(OWNER_KEY, String(ownerId));
     } catch {}
     startTransition(() => action(data));
   };
@@ -73,6 +109,8 @@ export function TripDialog({
       <form onSubmit={onSubmit} className="flex max-h-[90dvh] flex-col">
         {trip && <input type="hidden" name="id" value={trip.id} />}
         <input type="hidden" name="status" value={status} />
+        {ownerId !== null && <input type="hidden" name="owner_id" value={ownerId} />}
+        {goers.map((id) => <input key={id} type="hidden" name="participant_ids" value={id} />)}
 
         <header className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
           <h2 className="font-semibold">{trip ? "แก้ไขทริป" : "เพิ่มทริป / กิจกรรมใหม่"}</h2>
@@ -153,28 +191,54 @@ export function TripDialog({
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label htmlFor="owner" className={labelCls}>เจ้าของทริป (Owner)</label>
-              <input id="owner" name="owner" list="owner-list" maxLength={60} value={owner} onChange={(e) => setOwner(e.target.value)} placeholder="ใครเป็นคนดูแล" className={inputCls} />
-              <datalist id="owner-list">
-                {owners.map((o) => <option key={o} value={o} />)}
-              </datalist>
-            </div>
+          {members.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-slate-300 px-4 py-3 text-sm text-slate-500">
+              ยังไม่มีรายชื่อแก๊ง —{" "}
+              <Link href="/settings" className="font-medium text-sky-700 underline underline-offset-2">
+                เพิ่มรายชื่อในหน้าตั้งค่า
+              </Link>{" "}
+              แล้วกลับมาเลือกเจ้าของทริปและคนที่ไปได้เลย
+            </p>
+          ) : (
+            <>
+              <fieldset>
+                <legend className={labelCls}>เจ้าของทริป (Owner)</legend>
+                <div className="flex flex-wrap gap-1.5">
+                  {members.map((m) => (
+                    <MemberChip key={m.id} member={m} selected={ownerId === m.id} onClick={() => pickOwner(m.id)} />
+                  ))}
+                </div>
+              </fieldset>
+
+              <fieldset>
+                <legend className={`${labelCls} flex w-full items-center`}>
+                  ใครไปบ้าง <span className="ml-1 font-normal text-slate-400">({goers.length} คน)</span>
+                  <button
+                    type="button"
+                    onClick={() => setGoers(allGoing ? [] : members.map((m) => m.id))}
+                    className="ml-auto rounded px-1.5 text-xs font-medium text-sky-700 hover:bg-sky-50"
+                  >
+                    {allGoing ? "ล้าง" : "เลือกทุกคน"}
+                  </button>
+                </legend>
+                <div className="flex flex-wrap gap-1.5">
+                  {members.map((m) => (
+                    <MemberChip key={m.id} member={m} selected={goers.includes(m.id)} onClick={() => toggleGoer(m.id)} />
+                  ))}
+                </div>
+              </fieldset>
+            </>
+          )}
+
+          <div className="grid gap-4 sm:grid-cols-[10rem_1fr]">
             <div>
               <label htmlFor="budget" className={labelCls}>งบประมาณ (บาท/คน)</label>
               <input id="budget" name="budget" inputMode="numeric" defaultValue={trip?.budget ?? ""} placeholder="เช่น 3500" className={inputCls} />
             </div>
-          </div>
-
-          <div>
-            <label htmlFor="participants" className={labelCls}>ใครไปบ้าง <span className="font-normal text-slate-400">(คั่นด้วย ,)</span></label>
-            <input id="participants" name="participants" maxLength={500} defaultValue={trip?.participants ?? ""} placeholder="เช่น ต้น, ตี๋, แบม" className={inputCls} />
-          </div>
-
-          <div>
-            <label htmlFor="link" className={labelCls}>ลิงก์อ้างอิง</label>
-            <input id="link" name="link" type="text" inputMode="url" maxLength={1000} defaultValue={trip?.link ?? ""} placeholder="ที่พัก, รีวิว, Google Maps…" className={inputCls} />
+            <div>
+              <label htmlFor="link" className={labelCls}>ลิงก์อ้างอิง</label>
+              <input id="link" name="link" type="text" inputMode="url" maxLength={1000} defaultValue={trip?.link ?? ""} placeholder="ที่พัก, รีวิว, Google Maps…" className={inputCls} />
+            </div>
           </div>
 
           <div>

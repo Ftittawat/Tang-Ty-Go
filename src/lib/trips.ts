@@ -37,8 +37,8 @@ export type Trip = {
   end_date: string | null; // YYYY-MM-DD
   target_month: number | null; // 1-12
   target_year: number | null; // ค.ศ.
-  owner: string | null;
-  participants: string | null; // comma separated
+  owner_id: number | null;
+  participant_ids: number[];
   budget: number | null; // บาท / คน
   link: string | null;
   created_at: string;
@@ -94,8 +94,9 @@ export function daysUntil(date: string | null, today = new Date()) {
   return Math.round((Date.UTC(y, m - 1, day) - t) / 86_400_000);
 }
 
-export const splitPeople = (s: string | null) =>
-  (s ?? "").split(/[,،、]/).map((p) => p.trim()).filter(Boolean);
+export type Member = { id: number; name: string };
+
+export const MEMBER_NAME_MAX = 40;
 
 /** Sort key: real date first, then target month/year, then newest created. */
 export function sortKey(t: Trip) {
