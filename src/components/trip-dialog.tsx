@@ -2,6 +2,7 @@
 
 import { startTransition, useActionState, useEffect, useRef, useState, useTransition, type FormEvent } from "react";
 import { removeTrip, saveTrip } from "@/app/actions";
+import { openPlanForTrip } from "@/app/plan-actions";
 import Link from "next/link";
 import { Avatar, dangerBtn, ghostBtn, inputCls, labelCls, primaryBtn } from "@/components/ui";
 import { be, CATEGORIES, MONTHS_TH_FULL, STATUSES, type Member, type Status, type Trip } from "@/lib/trips";
@@ -47,6 +48,7 @@ export function TripDialog({
   const ref = useRef<HTMLDialogElement>(null);
   const [state, action, pending] = useActionState(saveTrip, null);
   const [deleting, startDelete] = useTransition();
+  const [openingPlan, startOpenPlan] = useTransition();
   const [status, setStatus] = useState<Status>(trip?.status ?? defaultStatus);
   const [start, setStart] = useState(trip?.start_date ?? "");
   // Only ever rendered client-side (opened by a click), so reading localStorage here is safe.
@@ -112,9 +114,20 @@ export function TripDialog({
         {ownerId !== null && <input type="hidden" name="owner_id" value={ownerId} />}
         {goers.map((id) => <input key={id} type="hidden" name="participant_ids" value={id} />)}
 
-        <header className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
+        <header className="flex items-center gap-2 border-b border-slate-100 px-5 py-3.5">
           <h2 className="font-semibold">{trip ? "แก้ไขทริป" : "เพิ่มทริป / กิจกรรมใหม่"}</h2>
-          <button type="button" onClick={() => ref.current?.close()} className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label="ปิด">
+          {trip && (
+            <button
+              type="button"
+              disabled={openingPlan}
+              onClick={() => startOpenPlan(() => openPlanForTrip(trip.id))}
+              className="ml-auto rounded-lg bg-violet-50 px-2.5 py-1 text-xs font-medium text-violet-700 transition hover:bg-violet-100 disabled:opacity-60"
+              title={trip.plan_id ? "เปิดแผนเที่ยวของทริปนี้" : "สร้างแผนเที่ยวจากวันที่ของทริปนี้"}
+            >
+              {openingPlan ? "กำลังเปิด…" : trip.plan_id ? "🗺️ แผนเที่ยว →" : "🗺️ สร้างแผนเที่ยว"}
+            </button>
+          )}
+          <button type="button" onClick={() => ref.current?.close()} className={`rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 ${trip ? "" : "ml-auto"}`} aria-label="ปิด">
             ✕
           </button>
         </header>

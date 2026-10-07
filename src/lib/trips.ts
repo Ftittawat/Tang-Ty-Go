@@ -41,6 +41,7 @@ export type Trip = {
   participant_ids: number[];
   budget: number | null; // บาท / คน
   link: string | null;
+  plan_id: number | null; // first itinerary linked to this trip, if any
   created_at: string;
   updated_at: string;
 };

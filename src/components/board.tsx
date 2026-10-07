@@ -5,18 +5,29 @@ import { startTransition, useCallback, useMemo, useOptimistic, useState } from "
 import { moveTrip } from "@/app/actions";
 import { TripCard } from "@/components/trip-card";
 import { TripDialog } from "@/components/trip-dialog";
-import { fieldCls, GearIcon, ghostBtn, Logo, primaryBtn } from "@/components/ui";
+import { AppNav } from "@/components/app-nav";
+import { fieldCls, GearIcon, ghostBtn, primaryBtn } from "@/components/ui";
 import { categoryOf, daysUntil, STATUSES, type Member, type Status, type Trip } from "@/lib/trips";
 
 type DialogState = { trip: Trip | null; status: Status } | null;
 
-export function Board({ trips, members }: { trips: Trip[]; members: Member[] }) {
+export function Board({
+  trips, members, initialTripId,
+}: {
+  trips: Trip[];
+  members: Member[];
+  initialTripId?: number;
+}) {
   const [optimistic, applyMove] = useOptimistic(trips, (cur, m: { id: number; status: Status }) =>
     cur.map((t) => (t.id === m.id ? { ...t, status: m.status } : t)),
   );
   const [query, setQuery] = useState("");
   const [person, setPerson] = useState("");
-  const [dialog, setDialog] = useState<DialogState>(null);
+  // `/?trip=ID` (e.g. from a plan page) opens that trip's card.
+  const [dialog, setDialog] = useState<DialogState>(() => {
+    const t = trips.find((x) => x.id === initialTripId);
+    return t ? { trip: t, status: t.status } : null;
+  });
   const [dragId, setDragId] = useState<number | null>(null);
   const [overCol, setOverCol] = useState<Status | null>(null);
 
@@ -51,19 +62,18 @@ export function Board({ trips, members }: { trips: Trip[]; members: Member[] }) 
     });
   };
 
-  const closeDialog = useCallback(() => setDialog(null), []);
+  const closeDialog = useCallback(() => {
+    setDialog(null);
+    // Drop a `?trip=` deep link so a refresh doesn't reopen the card.
+    if (window.location.search) window.history.replaceState(null, "", "/");
+  }, []);
 
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/85 backdrop-blur">
         <div className="mx-auto flex max-w-[1400px] flex-wrap items-center gap-3 px-4 py-3">
-          <div className="flex items-center gap-2.5">
-            <Logo />
-            <div>
-              <h1 className="text-lg font-bold leading-tight tracking-tight">Tang-Ty Go</h1>
-              <p className="hidden text-xs text-slate-500 sm:block">บอร์ดทริปและกิจกรรมของแก๊ง</p>
-            </div>
-          </div>
+          <h1 className="sr-only">Tang-Ty Go — บอร์ดทริป</h1>
+          <AppNav />
 
           <div className="order-last flex w-full gap-2 sm:order-none sm:ml-auto sm:w-auto">
             <input
@@ -81,8 +91,9 @@ export function Board({ trips, members }: { trips: Trip[]; members: Member[] }) 
           </div>
 
           <div className="ml-auto flex gap-2 sm:ml-0">
-            <button onClick={() => setDialog({ trip: null, status: "todo" })} className={primaryBtn}>
-              <span className="text-base leading-none">+</span> เพิ่มทริป
+            <button onClick={() => setDialog({ trip: null, status: "todo" })} className={primaryBtn} aria-label="เพิ่มทริป">
+              <span className="text-base leading-none">+</span>
+              <span className="hidden sm:inline">เพิ่มทริป</span>
             </button>
             <Link href="/settings" className={`${ghostBtn} px-2.5`} title="ตั้งค่า" aria-label="ตั้งค่า">
               <GearIcon />
