@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Avatar, AvatarStack } from "@/components/ui";
 import {
   categoryOf, daysUntil, formatDateRange, formatTarget, STATUSES, tripNights, type Trip,
@@ -101,6 +102,14 @@ export function TripCard({
           </span>
         )}
         {people.length > 0 && <span className="relative"><AvatarStack names={people} /></span>}
+        {trip.plan_id !== null && (
+          <Link
+            href={`/plans/${trip.plan_id}`}
+            className="relative rounded-full bg-violet-50 px-2 py-0.5 text-[11px] text-violet-700 hover:bg-violet-100"
+          >
+            🗺️ แผน
+          </Link>
+        )}
         {trip.link && (
           <a
             href={trip.link}

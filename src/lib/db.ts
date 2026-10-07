@@ -44,6 +44,31 @@ export function db(): Database.Database {
       member_id INTEGER NOT NULL REFERENCES members(id) ON DELETE CASCADE,
       PRIMARY KEY (trip_id, member_id)
     );
+    CREATE TABLE IF NOT EXISTS plans (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      title      TEXT NOT NULL,
+      trip_id    INTEGER REFERENCES trips(id) ON DELETE SET NULL,
+      start_date TEXT,
+      day_count  INTEGER NOT NULL DEFAULT 1,
+      note       TEXT,
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS plans_trip ON plans(trip_id);
+    CREATE TABLE IF NOT EXISTS plan_items (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      plan_id      INTEGER NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
+      day          INTEGER NOT NULL DEFAULT 1,
+      position     INTEGER NOT NULL DEFAULT 0,
+      kind         TEXT NOT NULL DEFAULT 'activity',
+      title        TEXT,
+      details      TEXT,
+      location     TEXT,
+      start_time   TEXT,
+      duration_min INTEGER,
+      travel_mode  TEXT
+    );
+    CREATE INDEX IF NOT EXISTS plan_items_plan ON plan_items(plan_id, day, position);
   `);
   migrateFreeTextPeople(d);
   g.__db = d;
@@ -113,7 +138,7 @@ export function deleteMember(id: number) {
 
 // ---------- trips ----------
 
-export type TripInput = Omit<Trip, "id" | "created_at" | "updated_at">;
+export type TripInput = Omit<Trip, "id" | "plan_id" | "created_at" | "updated_at">;
 
 const COLUMNS = [
   "title", "description", "status", "category", "location", "start_date", "end_date",
@@ -123,7 +148,9 @@ const COLUMNS = [
 export function listTrips(): Trip[] {
   const rows = db()
     .prepare(`
-      SELECT t.*, (SELECT json_group_array(member_id) FROM trip_members WHERE trip_id = t.id) AS participant_ids
+      SELECT t.*,
+        (SELECT json_group_array(member_id) FROM trip_members WHERE trip_id = t.id) AS participant_ids,
+        (SELECT MIN(id) FROM plans WHERE trip_id = t.id) AS plan_id
       FROM trips t
     `)
     .all() as (Omit<Trip, "participant_ids"> & { participant_ids: string })[];
