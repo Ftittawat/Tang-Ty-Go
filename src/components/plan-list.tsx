@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { AppNav } from "@/components/app-nav";
+import { AppHeader } from "@/components/app-nav";
 import { Modal } from "@/components/modal";
 import { PlanForm } from "@/components/plan-form";
-import { GearIcon, ghostBtn, primaryBtn } from "@/components/ui";
+import { pageCls, primaryBtn } from "@/components/ui";
 import type { PlanSummary } from "@/lib/plan-store";
 import { dayDateLabel } from "@/lib/plans";
 import { categoryOf, type Trip } from "@/lib/trips";
@@ -16,34 +16,26 @@ export function PlanList({ plans, trips }: { plans: PlanSummary[]; trips: Trip[]
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/85 backdrop-blur">
-        <div className="mx-auto flex max-w-4xl items-center gap-3 px-4 py-3">
-          <AppNav />
-          <div className="ml-auto flex gap-2">
-            <button onClick={() => setCreating(true)} className={primaryBtn} aria-label="สร้างแผน">
-              <span className="text-base leading-none">+</span>
-              <span className="hidden sm:inline">สร้างแผน</span>
-            </button>
-            <Link href="/settings" className={`${ghostBtn} px-2.5`} title="ตั้งค่า" aria-label="ตั้งค่า">
-              <GearIcon />
-            </Link>
-          </div>
-        </div>
-      </header>
+      <AppHeader>
+        <button onClick={() => setCreating(true)} className={primaryBtn} aria-label="สร้างแผน">
+          <span className="text-base leading-none">+</span>
+          <span className="hidden sm:inline">สร้างแผน</span>
+        </button>
+      </AppHeader>
 
-      <main className="mx-auto max-w-4xl px-4 py-6">
+      <main className={`${pageCls} py-6`}>
         <h1 className="text-lg font-bold">แผนเที่ยว</h1>
         <p className="mb-4 text-sm text-slate-500">กำหนดการรายวันของแต่ละทริป — เวลา สถานที่ และเวลาเดินทางระหว่างจุด</p>
 
         {plans.length === 0 ? (
-          <div className="rounded-2xl border-2 border-dashed border-slate-300 px-6 py-12 text-center">
+          <div className="max-w-2xl rounded-2xl border-2 border-dashed border-slate-300 px-6 py-12 text-center">
             <p className="text-3xl">🗺️</p>
             <p className="mt-2 font-medium">ยังไม่มีแผนเที่ยว</p>
             <p className="mt-1 text-sm text-slate-500">สร้างแผนใหม่ หรือกด “แผนเที่ยว” จากการ์ดทริปบนบอร์ด</p>
             <button onClick={() => setCreating(true)} className={`${primaryBtn} mt-4`}>+ สร้างแผน</button>
           </div>
         ) : (
-          <ul className="grid gap-3 sm:grid-cols-2">
+          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {plans.map((p) => {
               const trip = p.trip_id ? tripById.get(p.trip_id) : undefined;
               const first = dayDateLabel(p.start_date, 1);

@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Logo } from "@/components/ui";
+import type { ReactNode } from "react";
+import { GearIcon, ghostBtn, Logo, pageCls } from "@/components/ui";
 
 const TABS = [
   { href: "/", label: "บอร์ด", match: (p: string) => p === "/" },
@@ -35,5 +36,35 @@ export function AppNav() {
         })}
       </nav>
     </div>
+  );
+}
+
+/**
+ * Sticky top bar used by every page. Same width everywhere so the logo, tabs and
+ * buttons stay put when switching pages. `children` go between the tabs and the gear.
+ */
+export function AppHeader({
+  children, below, settings = true,
+}: {
+  children?: ReactNode;
+  /** Extra row inside the sticky bar (e.g. the board's filters on phones). */
+  below?: ReactNode;
+  settings?: boolean;
+}) {
+  return (
+    <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/85 backdrop-blur">
+      <div className={`${pageCls} flex flex-wrap items-center gap-x-2 gap-y-3 py-3`}>
+        <AppNav />
+        <div className="ml-auto flex items-center gap-2">
+          {children}
+          {settings && (
+            <Link href="/settings" className={`${ghostBtn} px-2.5`} title="ตั้งค่า" aria-label="ตั้งค่า">
+              <GearIcon />
+            </Link>
+          )}
+        </div>
+      </div>
+      {below}
+    </header>
   );
 }

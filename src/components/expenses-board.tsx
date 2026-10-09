@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { startTransition, useCallback, useMemo, useOptimistic, useState } from "react";
 import { setExpenseShares, setSettled } from "@/app/actions";
-import { AppNav } from "@/components/app-nav";
+import { AppHeader } from "@/components/app-nav";
 import { ExpenseDialog } from "@/components/expense-dialog";
-import { Avatar, GearIcon, ghostBtn, primaryBtn } from "@/components/ui";
+import { Avatar, ghostBtn, pageCls, primaryBtn } from "@/components/ui";
 import { formatBaht, settle, sharersOf, splitAmount, type Balance, type Expense } from "@/lib/expenses";
 import { categoryOf, formatDateRange, type Member, type Trip } from "@/lib/trips";
 
@@ -112,16 +112,9 @@ export function ExpensesBoard({
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/85 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3">
-          <AppNav />
-          <Link href="/settings" className={`${ghostBtn} ml-auto px-2.5`} title="ตั้งค่า" aria-label="ตั้งค่า">
-            <GearIcon />
-          </Link>
-        </div>
-      </header>
+      <AppHeader />
 
-      <main className="mx-auto max-w-6xl space-y-5 px-4 py-5">
+      <main className={`${pageCls} space-y-5 py-5`}>
         <div>
           <Link href="/" className="text-sm text-slate-500 hover:text-slate-800">← บอร์ด</Link>
           <div className="mt-2 flex items-start gap-3">

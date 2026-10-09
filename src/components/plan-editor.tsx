@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { useCallback, useMemo, useState, useTransition } from "react";
 import { deleteItem, deletePlan, moveItem } from "@/app/plan-actions";
-import { AppNav } from "@/components/app-nav";
+import { AppHeader } from "@/components/app-nav";
 import { Modal } from "@/components/modal";
 import { PlanForm } from "@/components/plan-form";
 import { PlanItemForm, type ItemDraft } from "@/components/plan-item-form";
-import { dangerBtn, GearIcon, ghostBtn } from "@/components/ui";
+import { dangerBtn, ghostBtn, pageCls } from "@/components/ui";
 import {
   dayDateLabel, dayOffset, daySummary, formatDuration, formatTime, mapsUrl, scheduleDay, travelModeOf,
   type Plan, type PlanItem, type ScheduledItem,
@@ -182,133 +182,128 @@ export function PlanEditor({
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/85 backdrop-blur">
-        <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-3">
-          <AppNav />
-          <Link href="/settings" className={`${ghostBtn} ml-auto px-2.5`} title="ตั้งค่า" aria-label="ตั้งค่า">
-            <GearIcon />
-          </Link>
-        </div>
-      </header>
+      <AppHeader />
 
-      <main className="mx-auto max-w-3xl px-4 py-5">
-        <Link href="/plans" className="text-sm text-slate-500 hover:text-slate-800">← แผนทั้งหมด</Link>
+      <main className={`${pageCls} py-5`}>
+        <div className="max-w-3xl">
+          <Link href="/plans" className="text-sm text-slate-500 hover:text-slate-800">← แผนทั้งหมด</Link>
 
-        <div className="mt-2 flex items-start gap-3">
-          <div className="min-w-0 flex-1">
-            <h1 className="text-xl font-bold leading-snug break-words">{plan.title}</h1>
-            <p className="mt-1 text-sm text-slate-500">
-              🗓️ {first ? `${first}${last ? ` – ${last}` : ""}` : "ยังไม่กำหนดวัน"} · {plan.day_count} วัน
-            </p>
+          <div className="mt-2 flex items-start gap-3">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-xl font-bold leading-snug break-words">{plan.title}</h1>
+              <p className="mt-1 text-sm text-slate-500">
+                🗓️ {first ? `${first}${last ? ` – ${last}` : ""}` : "ยังไม่กำหนดวัน"} · {plan.day_count} วัน
+              </p>
+            </div>
+            <button onClick={() => setEditingPlan(true)} className={`${ghostBtn} shrink-0`}>แก้ไขแผน</button>
           </div>
-          <button onClick={() => setEditingPlan(true)} className={`${ghostBtn} shrink-0`}>แก้ไขแผน</button>
-        </div>
 
-        {trip && (
-          <Link
-            href={`/?trip=${trip.id}`}
-            className="mt-3 flex items-center gap-2 rounded-xl border border-sky-100 bg-sky-50 px-3 py-2 text-sm text-sky-900 transition hover:border-sky-200"
-          >
-            <span aria-hidden>{categoryOf(trip.category).emoji}</span>
-            <span className="min-w-0 flex-1 truncate">
-              <span className="text-sky-600">ทริป: </span>
-              <span className="font-medium">{trip.title}</span>
-              {formatDateRange(trip.start_date, trip.end_date) && <span className="text-sky-700"> · {formatDateRange(trip.start_date, trip.end_date)}</span>}
-            </span>
-            <span className="shrink-0 text-xs text-sky-600">เปิดการ์ด →</span>
-          </Link>
-        )}
+          {trip && (
+            <Link
+              href={`/?trip=${trip.id}`}
+              className="mt-3 flex items-center gap-2 rounded-xl border border-sky-100 bg-sky-50 px-3 py-2 text-sm text-sky-900 transition hover:border-sky-200"
+            >
+              <span aria-hidden>{categoryOf(trip.category).emoji}</span>
+              <span className="min-w-0 flex-1 truncate">
+                <span className="text-sky-600">ทริป: </span>
+                <span className="font-medium">{trip.title}</span>
+                {formatDateRange(trip.start_date, trip.end_date) && <span className="text-sky-700"> · {formatDateRange(trip.start_date, trip.end_date)}</span>}
+              </span>
+              <span className="shrink-0 text-xs text-sky-600">เปิดการ์ด →</span>
+            </Link>
+          )}
 
-        {plan.note && <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-sm whitespace-pre-line text-amber-900">📝 {plan.note}</p>}
+          {plan.note && <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-sm whitespace-pre-line text-amber-900">📝 {plan.note}</p>}
 
-        {plan.day_count > 1 && (
-          <nav className="sticky top-[61px] z-[5] -mx-4 mt-4 flex gap-1.5 overflow-x-auto bg-[#f4f7fb]/90 px-4 py-2 backdrop-blur" aria-label="ไปยังวัน">
-            {days.map((d) => (
-              <a key={d.day} href={`#day-${d.day}`} className="shrink-0 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600 hover:border-sky-300 hover:text-sky-700">
-                วันที่ {d.day}
-              </a>
-            ))}
-          </nav>
-        )}
+          {plan.day_count > 1 && (
+            <nav className="sticky top-[61px] z-[5] -mx-4 mt-4 flex gap-1.5 overflow-x-auto bg-[#f4f7fb]/90 px-4 py-2 backdrop-blur" aria-label="ไปยังวัน">
+              {days.map((d) => (
+                <a key={d.day} href={`#day-${d.day}`} className="shrink-0 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600 hover:border-sky-300 hover:text-sky-700">
+                  วันที่ {d.day}
+                </a>
+              ))}
+            </nav>
+          )}
 
-        <div className="mt-4 space-y-6">
-          {days.map(({ day, scheduled, summary }) => {
-            const lastEnd = scheduled.at(-1)?.end ?? null;
-            return (
-              <section key={day} id={`day-${day}`} className="scroll-mt-28 rounded-2xl border border-slate-200 bg-white/60 p-3 sm:p-4">
-                <div className="mb-3 flex flex-wrap items-baseline gap-x-2">
-                  <h2 className="font-bold">วันที่ {day}</h2>
-                  {dayDateLabel(plan.start_date, day) && <span className="text-sm text-slate-500">{dayDateLabel(plan.start_date, day)}</span>}
-                  {summary.start !== null && (
-                    <span className="ml-auto text-xs text-slate-500">
-                      <Time min={summary.start} /> – <Time min={summary.end} />
-                      {summary.travel > 0 && <> · เดินทางรวม {formatDuration(summary.travel)}</>}
-                    </span>
+          <div className="mt-4 space-y-6">
+            {days.map(({ day, scheduled, summary }) => {
+              const lastEnd = scheduled.at(-1)?.end ?? null;
+              return (
+                <section key={day} id={`day-${day}`} className="scroll-mt-28 rounded-2xl border border-slate-200 bg-white/60 p-3 sm:p-4">
+                  <div className="mb-3 flex flex-wrap items-baseline gap-x-2">
+                    <h2 className="font-bold">วันที่ {day}</h2>
+                    {dayDateLabel(plan.start_date, day) && <span className="text-sm text-slate-500">{dayDateLabel(plan.start_date, day)}</span>}
+                    {summary.start !== null && (
+                      <span className="ml-auto text-xs text-slate-500">
+                        <Time min={summary.start} /> – <Time min={summary.end} />
+                        {summary.travel > 0 && <> · เดินทางรวม {formatDuration(summary.travel)}</>}
+                      </span>
+                    )}
+                  </div>
+
+                  {scheduled.length === 0 ? (
+                    <p className="rounded-xl border-2 border-dashed border-slate-200 px-3 py-6 text-center text-sm text-slate-400">ยังไม่มีกำหนดการของวันนี้</p>
+                  ) : (
+                    <ol>
+                      {scheduled.map((s, i) => {
+                        const prev = scheduled[i - 1];
+                        const prevEnd = prev?.end ?? null;
+                        const rowProps = {
+                          s,
+                          isFirst: i === 0,
+                          isLast: i === scheduled.length - 1,
+                          onEdit: () => setDraft({ item: s.item, kind: s.item.kind, day, autoStart: prevEnd }),
+                        };
+                        // Two activities back to back: offer to slot a travel leg between them.
+                        const canInsertTravel = prev && prev.item.kind === "activity" && s.item.kind === "activity";
+                        return [
+                          canInsertTravel && (
+                            <Connector key={`t${s.item.id}`}>
+                              <button
+                                type="button"
+                                onClick={() => setDraft({ kind: "travel", day, beforeId: s.item.id, autoStart: prevEnd })}
+                                className="rounded-md px-2 py-0.5 text-xs text-slate-400 transition hover:bg-sky-50 hover:text-sky-700"
+                              >
+                                + เวลาเดินทาง
+                              </button>
+                            </Connector>
+                          ),
+                          s.gap > 0 && (
+                            <Connector key={`g${s.item.id}`}>
+                              <span className="text-xs text-emerald-700">☕ ว่าง {formatDuration(s.gap)}</span>
+                            </Connector>
+                          ),
+                          s.item.kind === "travel" ? (
+                            <TravelRow key={s.item.id} {...rowProps} />
+                          ) : (
+                            <ActivityRow key={s.item.id} {...rowProps} prevEnd={prevEnd} />
+                          ),
+                        ];
+                      })}
+                    </ol>
                   )}
-                </div>
 
-                {scheduled.length === 0 ? (
-                  <p className="rounded-xl border-2 border-dashed border-slate-200 px-3 py-6 text-center text-sm text-slate-400">ยังไม่มีกำหนดการของวันนี้</p>
-                ) : (
-                  <ol>
-                    {scheduled.map((s, i) => {
-                      const prev = scheduled[i - 1];
-                      const prevEnd = prev?.end ?? null;
-                      const rowProps = {
-                        s,
-                        isFirst: i === 0,
-                        isLast: i === scheduled.length - 1,
-                        onEdit: () => setDraft({ item: s.item, kind: s.item.kind, day, autoStart: prevEnd }),
-                      };
-                      // Two activities back to back: offer to slot a travel leg between them.
-                      const canInsertTravel = prev && prev.item.kind === "activity" && s.item.kind === "activity";
-                      return [
-                        canInsertTravel && (
-                          <Connector key={`t${s.item.id}`}>
-                            <button
-                              type="button"
-                              onClick={() => setDraft({ kind: "travel", day, beforeId: s.item.id, autoStart: prevEnd })}
-                              className="rounded-md px-2 py-0.5 text-xs text-slate-400 transition hover:bg-sky-50 hover:text-sky-700"
-                            >
-                              + เวลาเดินทาง
-                            </button>
-                          </Connector>
-                        ),
-                        s.gap > 0 && (
-                          <Connector key={`g${s.item.id}`}>
-                            <span className="text-xs text-emerald-700">☕ ว่าง {formatDuration(s.gap)}</span>
-                          </Connector>
-                        ),
-                        s.item.kind === "travel" ? (
-                          <TravelRow key={s.item.id} {...rowProps} />
-                        ) : (
-                          <ActivityRow key={s.item.id} {...rowProps} prevEnd={prevEnd} />
-                        ),
-                      ];
-                    })}
-                  </ol>
-                )}
-
-                <div className="mt-2 flex flex-wrap gap-2 sm:pl-[5.5rem]">
-                  <button
-                    type="button"
-                    onClick={() => setDraft({ kind: "activity", day, autoStart: lastEnd })}
-                    className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-sm font-medium text-sky-700 transition hover:bg-sky-100"
-                  >
-                    + กิจกรรม
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDraft({ kind: "travel", day, autoStart: lastEnd })}
-                    disabled={scheduled.length === 0}
-                    className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-40"
-                  >
-                    + เดินทาง
-                  </button>
-                </div>
-              </section>
-            );
-          })}
+                  <div className="mt-2 flex flex-wrap gap-2 sm:pl-[5.5rem]">
+                    <button
+                      type="button"
+                      onClick={() => setDraft({ kind: "activity", day, autoStart: lastEnd })}
+                      className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-sm font-medium text-sky-700 transition hover:bg-sky-100"
+                    >
+                      + กิจกรรม
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDraft({ kind: "travel", day, autoStart: lastEnd })}
+                      disabled={scheduled.length === 0}
+                      className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-40"
+                    >
+                      + เดินทาง
+                    </button>
+                  </div>
+                </section>
+              );
+            })}
+          </div>
         </div>
       </main>
 

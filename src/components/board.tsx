@@ -1,12 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { startTransition, useCallback, useMemo, useOptimistic, useState } from "react";
 import { moveTrip } from "@/app/actions";
 import { TripCard } from "@/components/trip-card";
 import { TripDialog } from "@/components/trip-dialog";
-import { AppNav } from "@/components/app-nav";
-import { fieldCls, GearIcon, ghostBtn, primaryBtn } from "@/components/ui";
+import { AppHeader } from "@/components/app-nav";
+import { fieldCls, pageCls, primaryBtn } from "@/components/ui";
 import { categoryOf, daysUntil, STATUSES, type Member, type Status, type Trip } from "@/lib/trips";
 
 type DialogState = { trip: Trip | null; status: Status } | null;
@@ -68,44 +67,39 @@ export function Board({
     if (window.location.search) window.history.replaceState(null, "", "/");
   }, []);
 
+  const filters = (searchCls: string, selectCls: string) => (
+    <>
+      <input
+        type="search"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="ค้นหาทริป สถานที่ คน…"
+        aria-label="ค้นหา"
+        className={`${fieldCls} ${searchCls}`}
+      />
+      <select value={person} onChange={(e) => setPerson(e.target.value)} aria-label="กรองตามคน (เจ้าของหรือคนที่ไป)" className={`${fieldCls} ${selectCls}`}>
+        <option value="">ทุกคน</option>
+        {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+      </select>
+    </>
+  );
+
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/85 backdrop-blur">
-        <div className="mx-auto flex max-w-[1400px] flex-wrap items-center gap-3 px-4 py-3">
-          <h1 className="sr-only">Tang-Ty Go — บอร์ดทริป</h1>
-          <AppNav />
-
-          <div className="order-last flex w-full gap-2 sm:order-none sm:ml-auto sm:w-auto">
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="ค้นหาทริป สถานที่ คน…"
-              aria-label="ค้นหา"
-              className={`${fieldCls} min-w-0 flex-1 sm:w-64 sm:flex-none`}
-            />
-            <select value={person} onChange={(e) => setPerson(e.target.value)} aria-label="กรองตามคน (เจ้าของหรือคนที่ไป)" className={`${fieldCls} w-28 shrink-0 sm:w-36`}>
-              <option value="">ทุกคน</option>
-              {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
-            </select>
-          </div>
-
-          <div className="ml-auto flex gap-2 sm:ml-0">
-            <button onClick={() => setDialog({ trip: null, status: "todo" })} className={primaryBtn} aria-label="เพิ่มทริป">
-              <span className="text-base leading-none">+</span>
-              <span className="hidden sm:inline">เพิ่มทริป</span>
-            </button>
-            <Link href="/settings" className={`${ghostBtn} px-2.5`} title="ตั้งค่า" aria-label="ตั้งค่า">
-              <GearIcon />
-            </Link>
-          </div>
-        </div>
-      </header>
+      <AppHeader below={<div className={`${pageCls} flex gap-2 pb-3 sm:hidden`}>{filters("min-w-0 flex-1", "w-28 shrink-0")}</div>}>
+        <h1 className="sr-only">Tang-Ty Go — บอร์ดทริป</h1>
+        {/* On phones the filters move to their own row (`below`) instead of squeezing in here. */}
+        <div className="hidden gap-2 sm:flex">{filters("w-64", "w-36")}</div>
+        <button onClick={() => setDialog({ trip: null, status: "todo" })} className={primaryBtn} aria-label="เพิ่มทริป">
+          <span className="text-base leading-none">+</span>
+          <span className="hidden sm:inline">เพิ่มทริป</span>
+        </button>
+      </AppHeader>
 
       {nextTrip && (
         <button
           onClick={() => setDialog({ trip: nextTrip, status: nextTrip.status })}
-          className="mx-auto mt-4 flex w-[calc(100%-2rem)] max-w-[1400px] items-center gap-3 rounded-xl bg-gradient-to-r from-sky-600 to-teal-600 px-4 py-3 text-left text-white shadow-sm transition hover:brightness-110"
+          className="mx-auto mt-4 flex w-[calc(100%-2rem)] max-w-[calc(1400px-2rem)] items-center gap-3 rounded-xl bg-gradient-to-r from-sky-600 to-teal-600 px-4 py-3 text-left text-white shadow-sm transition hover:brightness-110"
         >
           <span className="text-2xl">{categoryOf(nextTrip.category).emoji}</span>
           <span className="min-w-0 flex-1">
@@ -119,7 +113,7 @@ export function Board({
         </button>
       )}
 
-      <main className="mx-auto w-full max-w-[1400px] flex-1 px-4 py-4">
+      <main className={`${pageCls} flex-1 py-4`}>
         <div className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-4 lg:mx-0 lg:grid lg:grid-cols-4 lg:overflow-visible lg:px-0">
           {STATUSES.map((s) => {
             const items = visible.filter((t) => t.status === s.id);

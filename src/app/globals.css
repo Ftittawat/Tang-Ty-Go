@@ -4,6 +4,11 @@
   --font-sans: var(--font-thai), ui-sans-serif, system-ui, sans-serif;
 }
 
+/* Reserve the scrollbar's space on every page, so short and long pages line up. */
+html {
+  scrollbar-gutter: stable;
+}
+
 body {
   background: #f4f7fb;
   color: #0f172a;

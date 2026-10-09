@@ -1,5 +1,8 @@
 import type { Member } from "@/lib/trips";
 
+/** Page frame shared by the header and every page's content, so widths never jump between pages. */
+export const pageCls = "mx-auto w-full max-w-[1400px] px-4";
+
 export const fieldCls =
   "rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 disabled:bg-slate-50";
 
