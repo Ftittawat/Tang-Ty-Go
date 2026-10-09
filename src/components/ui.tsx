@@ -1,3 +1,5 @@
+import type { Member } from "@/lib/trips";
+
 export const fieldCls =
   "rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 disabled:bg-slate-50";
 
@@ -57,6 +59,25 @@ export function AvatarStack({ names, max = 4 }: { names: string[]; max?: number 
         </span>
       )}
     </span>
+  );
+}
+
+export function MemberChip({ member, selected, onClick }: { member: Member; selected: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={selected}
+      className={`inline-flex items-center gap-1.5 rounded-full border py-1 pl-1 pr-3 text-sm transition ${
+        selected
+          ? "border-sky-500 bg-sky-50 font-medium text-sky-800 ring-1 ring-sky-500"
+          : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+      }`}
+    >
+      <Avatar name={member.name} />
+      {member.name}
+      {selected && <span aria-hidden className="text-sky-600">✓</span>}
+    </button>
   );
 }
 

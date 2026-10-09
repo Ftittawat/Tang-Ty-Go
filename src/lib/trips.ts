@@ -42,6 +42,7 @@ export type Trip = {
   budget: number | null; // บาท / คน
   link: string | null;
   plan_id: number | null; // first itinerary linked to this trip, if any
+  expense_total: number; // satang, sum of the trip's expenses
   created_at: string;
   updated_at: string;
 };

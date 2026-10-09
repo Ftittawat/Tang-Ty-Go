@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Avatar, AvatarStack } from "@/components/ui";
+import { formatBaht } from "@/lib/expenses";
 import {
   categoryOf, daysUntil, formatDateRange, formatTarget, STATUSES, tripNights, type Trip,
 } from "@/lib/trips";
@@ -100,6 +101,15 @@ export function TripCard({
           <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-600">
             ฿{trip.budget.toLocaleString("th-TH")}/คน
           </span>
+        )}
+        {trip.expense_total > 0 && (
+          <Link
+            href={`/trips/${trip.id}/expenses`}
+            title="ค่าใช้จ่าย / หารบิล"
+            className="relative rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 hover:bg-emerald-100"
+          >
+            💸 ฿{formatBaht(trip.expense_total)}
+          </Link>
         )}
         {people.length > 0 && <span className="relative"><AvatarStack names={people} /></span>}
         {trip.plan_id !== null && (

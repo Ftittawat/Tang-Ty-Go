@@ -1,6 +1,7 @@
 import Database from "better-sqlite3";
 import fs from "node:fs";
 import path from "node:path";
+import type { Expense } from "@/lib/expenses";
 import { sortKey, type Member, type Status, type Trip } from "@/lib/trips";
 
 export const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data");
@@ -69,6 +70,26 @@ export function db(): Database.Database {
       travel_mode  TEXT
     );
     CREATE INDEX IF NOT EXISTS plan_items_plan ON plan_items(plan_id, day, position);
+    CREATE TABLE IF NOT EXISTS expenses (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      trip_id    INTEGER NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+      title      TEXT NOT NULL,
+      amount     INTEGER NOT NULL,
+      payer_id   INTEGER REFERENCES members(id) ON DELETE SET NULL,
+      split_all  INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE INDEX IF NOT EXISTS expenses_trip ON expenses(trip_id);
+    CREATE TABLE IF NOT EXISTS expense_shares (
+      expense_id INTEGER NOT NULL REFERENCES expenses(id) ON DELETE CASCADE,
+      member_id  INTEGER NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+      PRIMARY KEY (expense_id, member_id)
+    );
+    CREATE TABLE IF NOT EXISTS trip_settled (
+      trip_id   INTEGER NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+      member_id INTEGER NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+      PRIMARY KEY (trip_id, member_id)
+    );
   `);
   migrateFreeTextPeople(d);
   g.__db = d;
@@ -138,23 +159,31 @@ export function deleteMember(id: number) {
 
 // ---------- trips ----------
 
-export type TripInput = Omit<Trip, "id" | "plan_id" | "created_at" | "updated_at">;
+export type TripInput = Omit<Trip, "id" | "plan_id" | "created_at" | "updated_at" | "expense_total">;
 
 const COLUMNS = [
   "title", "description", "status", "category", "location", "start_date", "end_date",
   "target_month", "target_year", "owner_id", "budget", "link",
 ] as const satisfies readonly (keyof TripInput)[];
 
+const TRIP_SELECT = `
+  SELECT t.*,
+    (SELECT json_group_array(member_id) FROM trip_members WHERE trip_id = t.id) AS participant_ids,
+    (SELECT MIN(id) FROM plans WHERE trip_id = t.id) AS plan_id,
+    (SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE trip_id = t.id) AS expense_total
+  FROM trips t
+`;
+
+type TripRow = Omit<Trip, "participant_ids"> & { participant_ids: string };
+const toTrip = (r: TripRow): Trip => ({ ...r, participant_ids: JSON.parse(r.participant_ids) as number[] });
+
+export function getTrip(id: number): Trip | null {
+  const row = db().prepare(`${TRIP_SELECT} WHERE t.id = ?`).get(id) as TripRow | undefined;
+  return row ? toTrip(row) : null;
+}
+
 export function listTrips(): Trip[] {
-  const rows = db()
-    .prepare(`
-      SELECT t.*,
-        (SELECT json_group_array(member_id) FROM trip_members WHERE trip_id = t.id) AS participant_ids,
-        (SELECT MIN(id) FROM plans WHERE trip_id = t.id) AS plan_id
-      FROM trips t
-    `)
-    .all() as (Omit<Trip, "participant_ids"> & { participant_ids: string })[];
-  const trips = rows.map((r) => ({ ...r, participant_ids: JSON.parse(r.participant_ids) as number[] }));
+  const trips = (db().prepare(TRIP_SELECT).all() as TripRow[]).map(toTrip);
   // Upcoming first everywhere, except Done which shows the most recent memory first.
   const doneKey = (t: Trip) => t.end_date ?? t.start_date ?? t.updated_at;
   return trips.sort((a, b) =>
@@ -197,4 +226,84 @@ export function setTripStatus(id: number, status: Status) {
 
 export function deleteTrip(id: number) {
   db().prepare("DELETE FROM trips WHERE id = ?").run(id);
+}
+
+// ---------- expenses ----------
+
+export type ExpenseInput = Pick<Expense, "title" | "amount" | "payer_id" | "split_all" | "share_ids">;
+
+export function listExpenses(tripId: number): Expense[] {
+  const rows = db()
+    .prepare(`
+      SELECT e.*, (SELECT json_group_array(member_id) FROM expense_shares WHERE expense_id = e.id) AS share_ids
+      FROM expenses e
+      WHERE e.trip_id = ?
+      ORDER BY e.created_at, e.id
+    `)
+    .all(tripId) as (Omit<Expense, "share_ids" | "split_all"> & { share_ids: string; split_all: number })[];
+  return rows.map((r) => ({ ...r, split_all: !!r.split_all, share_ids: JSON.parse(r.share_ids) as number[] }));
+}
+
+export function getExpense(id: number) {
+  return db().prepare("SELECT id, trip_id FROM expenses WHERE id = ?").get(id) as { id: number; trip_id: number } | undefined;
+}
+
+function setShares(expenseId: number, memberIds: number[]) {
+  const d = db();
+  d.prepare("DELETE FROM expense_shares WHERE expense_id = ?").run(expenseId);
+  const link = d.prepare("INSERT OR IGNORE INTO expense_shares (expense_id, member_id) VALUES (?, ?)");
+  for (const m of memberIds) link.run(expenseId, m);
+}
+
+const expenseRow = (input: ExpenseInput) => ({
+  title: input.title,
+  amount: input.amount,
+  payer_id: input.payer_id,
+  split_all: input.split_all ? 1 : 0,
+});
+
+export function createExpense(tripId: number, input: ExpenseInput) {
+  return db().transaction(() => {
+    const id = Number(
+      db()
+        .prepare("INSERT INTO expenses (trip_id, title, amount, payer_id, split_all) VALUES (@trip_id, @title, @amount, @payer_id, @split_all)")
+        .run({ ...expenseRow(input), trip_id: tripId }).lastInsertRowid,
+    );
+    setShares(id, input.split_all ? [] : input.share_ids);
+    return id;
+  })();
+}
+
+export function updateExpense(id: number, input: ExpenseInput) {
+  db().transaction(() => {
+    db()
+      .prepare("UPDATE expenses SET title = @title, amount = @amount, payer_id = @payer_id, split_all = @split_all WHERE id = @id")
+      .run({ ...expenseRow(input), id });
+    setShares(id, input.split_all ? [] : input.share_ids);
+  })();
+}
+
+/** Switch one expense to an explicit list of sharers (used by the tick boxes in the table). */
+export function setExpenseShares(id: number, memberIds: number[]) {
+  db().transaction(() => {
+    db().prepare("UPDATE expenses SET split_all = 0 WHERE id = ?").run(id);
+    setShares(id, memberIds);
+  })();
+}
+
+export function deleteExpense(id: number) {
+  db().prepare("DELETE FROM expenses WHERE id = ?").run(id);
+}
+
+export function listSettled(tripId: number): number[] {
+  return (db().prepare("SELECT member_id FROM trip_settled WHERE trip_id = ?").all(tripId) as { member_id: number }[])
+    .map((r) => r.member_id);
+}
+
+export function setSettled(tripId: number, memberId: number, settled: boolean) {
+  db()
+    .prepare(settled
+      ? "INSERT OR IGNORE INTO trip_settled (trip_id, member_id) VALUES (?, ?)"
+      : "DELETE FROM trip_settled WHERE trip_id = ? AND member_id = ?")
+    .run(tripId, memberId);
 }

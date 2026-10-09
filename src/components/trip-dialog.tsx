@@ -4,7 +4,8 @@ import { startTransition, useActionState, useEffect, useRef, useState, useTransi
 import { removeTrip, saveTrip } from "@/app/actions";
 import { openPlanForTrip } from "@/app/plan-actions";
 import Link from "next/link";
-import { Avatar, dangerBtn, ghostBtn, inputCls, labelCls, primaryBtn } from "@/components/ui";
+import { dangerBtn, ghostBtn, inputCls, labelCls, MemberChip, primaryBtn } from "@/components/ui";
+import { formatBaht } from "@/lib/expenses";
 import { be, CATEGORIES, MONTHS_TH_FULL, STATUSES, type Member, type Status, type Trip } from "@/lib/trips";
 
 const OWNER_KEY = "tg_owner_id";
@@ -16,25 +17,6 @@ function rememberedOwner(members: Member[]) {
   } catch {
     return null;
   }
-}
-
-function MemberChip({ member, selected, onClick }: { member: Member; selected: boolean; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={selected}
-      className={`inline-flex items-center gap-1.5 rounded-full border py-1 pl-1 pr-3 text-sm transition ${
-        selected
-          ? "border-sky-500 bg-sky-50 font-medium text-sky-800 ring-1 ring-sky-500"
-          : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
-      }`}
-    >
-      <Avatar name={member.name} />
-      {member.name}
-      {selected && <span aria-hidden className="text-sky-600">✓</span>}
-    </button>
-  );
 }
 
 export function TripDialog({
@@ -241,6 +223,22 @@ export function TripDialog({
                 </div>
               </fieldset>
             </>
+          )}
+
+          {trip && (
+            <Link
+              href={`/trips/${trip.id}/expenses`}
+              className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm transition hover:bg-emerald-100"
+            >
+              <span className="text-xl" aria-hidden>💸</span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-medium text-emerald-900">ค่าใช้จ่าย / หารบิล</span>
+                <span className="block text-xs text-emerald-700">
+                  {trip.expense_total > 0 ? `รวม ฿${formatBaht(trip.expense_total)} — ดูว่าใครต้องจ่ายเท่าไหร่` : "จดบิลที่จ่ายไป แล้วให้ระบบคิดว่าใครต้องโอนให้ใคร"}
+                </span>
+              </span>
+              <span className="text-emerald-700" aria-hidden>→</span>
+            </Link>
           )}
 
           <div className="grid gap-4 sm:grid-cols-[10rem_1fr]">

@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { checkPassword, createSessionValue, requireAuth, SESSION_COOKIE } from "@/lib/auth";
 import * as store from "@/lib/db";
 import type { TripInput } from "@/lib/db";
+import { AMOUNT_MAX, EXPENSE_TITLE_MAX, parseAmount } from "@/lib/expenses";
 import { isCategory, isStatus, MEMBER_NAME_MAX, type Status } from "@/lib/trips";
 
 export async function login(_prev: string | null, form: FormData) {
@@ -170,4 +171,78 @@ export async function removeMember(id: number) {
   await requireAuth();
   store.deleteMember(id);
   revalidatePath("/", "layout");
+}
+
+// ---------- expenses ----------
+
+export type ExpenseFormState = { ok: boolean; error?: string; at?: number } | null;
+
+const expensesPath = (tripId: number) => `/trips/${tripId}/expenses`;
+
+function revalidateExpenses(tripId: number) {
+  revalidatePath(expensesPath(tripId));
+  revalidatePath("/"); // card shows the trip total
+}
+
+function knownMembers(ids: unknown[]) {
+  const all = new Set(store.listMembers().map((m) => m.id));
+  return [...new Set(ids.map(Number))].filter((id) => all.has(id));
+}
+
+export async function saveExpense(_prev: ExpenseFormState, form: FormData): Promise<ExpenseFormState> {
+  await requireAuth();
+  const tripId = Number(form.get("trip_id"));
+  if (!store.getTrip(tripId)) return { ok: false, error: "ไม่พบทริปนี้ — อาจถูกลบไปแล้ว" };
+
+  const title = text(form, "title", EXPENSE_TITLE_MAX);
+  if (!title) return { ok: false, error: "ใส่ชื่อรายการด้วยนะ" };
+
+  const amount = parseAmount(String(form.get("amount") ?? ""));
+  if (amount === null) return { ok: false, error: "ใส่จำนวนเงินด้วยนะ" };
+  if (!(amount > 0 && amount <= AMOUNT_MAX)) return { ok: false, error: "จำนวนเงินไม่ถูกต้อง (ทศนิยมได้ไม่เกิน 2 ตำแหน่ง)" };
+
+  const [payer_id] = knownMembers([form.get("payer_id")].filter(Boolean));
+  if (payer_id === undefined) return { ok: false, error: "เลือกคนที่จ่ายด้วยนะ" };
+
+  const split_all = form.get("split_all") === "1";
+  const share_ids = knownMembers(form.getAll("share_ids"));
+  if (!split_all && share_ids.length === 0) return { ok: false, error: "เลือกคนที่หารอย่างน้อย 1 คน" };
+
+  const input = { title, amount, payer_id, split_all, share_ids };
+  const id = Number(form.get("id"));
+  if (id) {
+    if (store.getExpense(id)?.trip_id !== tripId) return { ok: false, error: "ไม่พบรายการนี้ — ลองรีเฟรชหน้า" };
+    store.updateExpense(id, input);
+  } else {
+    store.createExpense(tripId, input);
+  }
+
+  revalidateExpenses(tripId);
+  return { ok: true, at: Date.now() };
+}
+
+/** Tick / untick people straight from the table. */
+export async function setExpenseShares(id: number, memberIds: number[]) {
+  await requireAuth();
+  const e = store.getExpense(id);
+  if (!e) return;
+  const ids = knownMembers(memberIds);
+  if (ids.length === 0) return; // keep at least one sharer; the UI blocks this too
+  store.setExpenseShares(id, ids);
+  revalidateExpenses(e.trip_id);
+}
+
+export async function removeExpense(id: number) {
+  await requireAuth();
+  const e = store.getExpense(id);
+  if (!e) return;
+  store.deleteExpense(id);
+  revalidateExpenses(e.trip_id);
+}
+
+export async function setSettled(tripId: number, memberId: number, settled: boolean) {
+  await requireAuth();
+  if (!store.getTrip(tripId) || knownMembers([memberId]).length === 0) return;
+  store.setSettled(tripId, memberId, settled);
+  revalidatePath(expensesPath(tripId));
 }
