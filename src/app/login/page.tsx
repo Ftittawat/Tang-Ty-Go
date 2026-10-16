@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
 import { login } from "@/app/actions";
-import { inputCls, Logo, primaryBtn } from "@/components/ui";
+import { ShuttlecockIcon } from "@/components/icons";
+import { ghostBtn, inputCls, Logo, primaryBtn } from "@/components/ui";
 
 export default function LoginPage() {
   const [error, action, pending] = useActionState(login, null);
@@ -31,6 +33,14 @@ export default function LoginPage() {
         <button disabled={pending} className={`${primaryBtn} w-full py-2.5`}>
           {pending ? "กำลังตรวจสอบ…" : "เข้าสู่บอร์ด"}
         </button>
+        <div className="flex items-center gap-3 text-xs text-slate-400" aria-hidden>
+          <span className="h-px flex-1 bg-black/[0.08]" />หรือ<span className="h-px flex-1 bg-black/[0.08]" />
+        </div>
+        {/* /badminton is public (see proxy.ts): no password needed. */}
+        <Link href="/badminton" className={`${ghostBtn} w-full py-2.5`}>
+          <ShuttlecockIcon className="size-4 text-[#248a3d]" />
+          ลงชื่อตีแบด
+        </Link>
       </form>
     </main>
   );

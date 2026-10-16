@@ -40,7 +40,7 @@ export function ExpensesBoard({
   // "หารเท่าทุกคน" = the trip's people; a trip with nobody picked yet falls back to the whole gang.
   const pool = useMemo(() => {
     const goers = trip.participant_ids.filter((id) => names.has(id));
-    return goers.length ? goers : members.map((m) => m.id);
+    return goers.length ? goers : members.filter((m) => m.tags.includes("general")).map((m) => m.id);
   }, [trip.participant_ids, members, names]);
 
   // Columns: the pool plus anyone who paid or was ticked on some row (e.g. later removed from the trip).

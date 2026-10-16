@@ -160,3 +160,18 @@ export const LogoutIcon = (p: IconProps) => (
     <path d="M10 8l-4 4 4 4M6 12h9.5" />
   </Icon>
 );
+
+export const ShuttlecockIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M6 3.5h12l-3.2 10.5H9.2L6 3.5Z" />
+    <path d="M10.3 3.5 11 14M13.7 3.5 13 14M7.2 7.5h9.6" />
+    <path d="M9.2 14h5.6v1.3a2.8 2.8 0 0 1-5.6 0V14Z" />
+  </Icon>
+);
+
+export const CourtIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <rect x="4" y="3.5" width="16" height="17" rx="2" />
+    <path d="M4 12h16M12 3.5v5M12 15.5v5M4 8.5h16M4 15.5h16" />
+  </Icon>
+);
