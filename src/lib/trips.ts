@@ -1,10 +1,11 @@
 // Shared (client + server) trip types, constants and formatting helpers.
 
+// Colors are iOS system colors: `dot` the accent (also the progress ticks), `soft` + `text` a tinted pill, `ring` the drop target.
 export const STATUSES = [
-  { id: "todo", label: "To-Do", th: "อยากไป", hint: "ไอเดีย / ที่อยากไป", dot: "bg-slate-400", ring: "ring-slate-300", tint: "bg-slate-100" },
-  { id: "in_progress", label: "In Progress", th: "กำลังวางแผน", hint: "จองตั๋ว หาที่พัก นัดวัน", dot: "bg-amber-400", ring: "ring-amber-300", tint: "bg-amber-50" },
-  { id: "ready", label: "Ready to Go", th: "รอวันออกเดินทาง", hint: "แพลนเสร็จแล้ว รอถึงวันจริง", dot: "bg-sky-500", ring: "ring-sky-300", tint: "bg-sky-50" },
-  { id: "done", label: "Done", th: "ไปมาแล้ว", hint: "เก็บเป็นความทรงจำ", dot: "bg-emerald-500", ring: "ring-emerald-300", tint: "bg-emerald-50" },
+  { id: "todo", label: "To-Do", th: "อยากไป", hint: "ไอเดีย / ที่อยากไป", dot: "bg-[#8e8e93]", soft: "bg-[#8e8e93]/12", text: "text-[#636366]", ring: "ring-[#8e8e93]/40" },
+  { id: "in_progress", label: "In Progress", th: "กำลังวางแผน", hint: "จองตั๋ว หาที่พัก นัดวัน", dot: "bg-[#ff9500]", soft: "bg-[#ff9500]/12", text: "text-[#c93400]", ring: "ring-[#ff9500]/45" },
+  { id: "ready", label: "Ready to Go", th: "รอวันออกเดินทาง", hint: "แพลนเสร็จแล้ว รอถึงวันจริง", dot: "bg-[#007aff]", soft: "bg-[#007aff]/10", text: "text-[#0066d6]", ring: "ring-[#007aff]/40" },
+  { id: "done", label: "Done", th: "ไปมาแล้ว", hint: "เก็บเป็นความทรงจำ", dot: "bg-[#34c759]", soft: "bg-[#34c759]/12", text: "text-[#248a3d]", ring: "ring-[#34c759]/45" },
 ] as const;
 
 export type Status = (typeof STATUSES)[number]["id"];

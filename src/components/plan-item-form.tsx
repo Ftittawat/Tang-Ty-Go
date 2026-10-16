@@ -95,10 +95,10 @@ export function PlanItemForm({
                   type="button"
                   onClick={() => setMode(m.id)}
                   aria-pressed={mode === m.id}
-                  className={`rounded-full border px-3 py-1 text-sm transition ${
+                  className={`rounded-full px-3 py-1 text-sm ring-1 transition ${
                     mode === m.id
-                      ? "border-sky-500 bg-sky-50 font-medium text-sky-800 ring-1 ring-sky-500"
-                      : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                      ? "bg-sky-600/10 font-medium text-sky-700 ring-sky-600/60"
+                      : "text-slate-600 ring-black/[0.08] hover:bg-slate-50"
                   }`}
                 >
                   {m.emoji} {m.label}
@@ -128,7 +128,7 @@ export function PlanItemForm({
           </div>
         )}
 
-        <div className="rounded-xl bg-slate-50 p-3">
+        <div className="rounded-2xl bg-slate-100/70 p-3.5">
           <div className={`grid gap-3 ${isTravel ? "grid-cols-1" : "grid-cols-2 sm:grid-cols-[1fr_1fr_1.3fr]"}`}>
             {!isTravel && (
               <>
@@ -222,7 +222,7 @@ export function PlanItemForm({
         </div>
       </div>
 
-      <footer className="flex items-center gap-2 border-t border-slate-100 px-5 py-3">
+      <footer className="flex items-center gap-2 border-t border-black/[0.06] px-5 py-3">
         {state?.error && <p className="min-w-0 flex-1 text-sm text-rose-600">{state.error}</p>}
         <div className="ml-auto flex gap-2">
           <button type="button" onClick={close} className={ghostBtn}>ยกเลิก</button>

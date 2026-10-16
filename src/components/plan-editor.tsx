@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { useCallback, useMemo, useState, useTransition } from "react";
 import { deleteItem, deletePlan, moveItem } from "@/app/plan-actions";
-import { AppHeader } from "@/components/app-nav";
+import { AppHeader, PageTitle } from "@/components/app-nav";
+import { ArrowDownIcon, ArrowUpIcon, CalendarIcon, ChevronRightIcon, ClockIcon, MapPinIcon, PencilIcon, PlusIcon, TrashIcon } from "@/components/icons";
 import { Modal } from "@/components/modal";
 import { PlanForm } from "@/components/plan-form";
 import { PlanItemForm, type ItemDraft } from "@/components/plan-item-form";
-import { dangerBtn, ghostBtn, pageCls } from "@/components/ui";
+import { dangerBtn, ghostBtn, pageCls, surfaceCls } from "@/components/ui";
 import {
   dayDateLabel, dayOffset, daySummary, formatDuration, formatTime, mapsUrl, scheduleDay, travelModeOf,
   type Plan, type PlanItem, type ScheduledItem,
@@ -35,25 +36,25 @@ function ItemActions({
 }) {
   const [pending, start] = useTransition();
   const label = item.kind === "travel" ? "การเดินทางนี้" : `“${item.title}”`;
-  const btn = "rounded-md px-1.5 py-1 text-xs text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-30";
+  const btn = "flex size-7 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-30";
   return (
     <div
       className={`order-last -mb-1 ml-auto flex shrink-0 items-center sm:order-none sm:mb-0 sm:opacity-0 sm:transition sm:group-hover:opacity-100 sm:focus-within:opacity-100 ${
         pending ? "opacity-50" : ""
       }`}
     >
-      <button type="button" className={btn} disabled={isFirst || pending} onClick={() => start(() => moveItem(item.id, -1))} aria-label="เลื่อนขึ้น" title="เลื่อนขึ้น">↑</button>
-      <button type="button" className={btn} disabled={isLast || pending} onClick={() => start(() => moveItem(item.id, 1))} aria-label="เลื่อนลง" title="เลื่อนลง">↓</button>
-      <button type="button" className={btn} onClick={onEdit} aria-label="แก้ไข" title="แก้ไข">✎</button>
+      <button type="button" className={btn} disabled={isFirst || pending} onClick={() => start(() => moveItem(item.id, -1))} aria-label="เลื่อนขึ้น" title="เลื่อนขึ้น"><ArrowUpIcon className="size-3.5" /></button>
+      <button type="button" className={btn} disabled={isLast || pending} onClick={() => start(() => moveItem(item.id, 1))} aria-label="เลื่อนลง" title="เลื่อนลง"><ArrowDownIcon className="size-3.5" /></button>
+      <button type="button" className={btn} onClick={onEdit} aria-label="แก้ไข" title="แก้ไข"><PencilIcon className="size-3.5" /></button>
       <button
         type="button"
-        className={`${btn} hover:bg-rose-50 hover:text-rose-600`}
+        className={`${btn} hover:bg-[#ff3b30]/10 hover:text-[#ff3b30]`}
         disabled={pending}
         onClick={() => confirm(`ลบ${label}?`) && start(() => deleteItem(item.id))}
         aria-label="ลบ"
         title="ลบ"
       >
-        🗑
+        <TrashIcon className="size-3.5" />
       </button>
     </div>
   );
@@ -77,27 +78,27 @@ function ActivityRow({
       </div>
       <div className="relative flex w-4 shrink-0 justify-center">
         <span className="absolute inset-y-0 w-px bg-slate-200" />
-        <span className={`relative mt-4 size-3 rounded-full ring-4 ring-white ${s.late ? "bg-rose-500" : "bg-sky-500"}`} />
+        <span className={`relative mt-4 size-3 rounded-full ring-4 ring-[#f5f5f7] ${s.late ? "bg-[#ff3b30]" : "bg-sky-600"}`} />
       </div>
-      <div className={`mb-2 flex min-w-0 flex-1 flex-wrap items-start gap-x-2 rounded-xl border bg-white p-3 shadow-sm ${s.late ? "border-rose-200" : "border-slate-200"}`}>
+      <div className={`mb-2 flex min-w-0 flex-1 flex-wrap items-start gap-x-2 rounded-2xl bg-white p-3.5 shadow-card ring-1 ${s.late ? "ring-[#ff3b30]/40" : "ring-black/[0.04]"}`}>
         <ItemActions item={item} isFirst={isFirst} isLast={isLast} onEdit={onEdit} />
         <div className="min-w-0 basis-full sm:flex-1 sm:basis-0 sm:-order-1">
           <button type="button" onClick={onEdit} className="w-full text-left">
-            <h3 className="font-semibold leading-snug break-words">{item.title}</h3>
+            <h3 className="font-semibold leading-normal break-words">{item.title}</h3>
           </button>
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
-            {formatDuration(item.duration_min) && <span>⏱ {formatDuration(item.duration_min)}</span>}
+            {formatDuration(item.duration_min) && <span className="flex items-center gap-1"><ClockIcon className="size-3.5 text-slate-400" />{formatDuration(item.duration_min)}</span>}
             {s.auto && <span className="text-slate-400" title="เริ่มต่อจากรายการก่อนหน้าอัตโนมัติ">↳ ต่อเนื่อง</span>}
             {item.location && (
-              <a href={mapsUrl(item.location)} target="_blank" rel="noreferrer" className="text-sky-700 hover:underline">
-                📍 {item.location}
+              <a href={mapsUrl(item.location)} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-sky-600 hover:underline">
+                <MapPinIcon className="size-3.5" />{item.location}
               </a>
             )}
           </div>
           {item.details && <p className="mt-2 text-sm whitespace-pre-line text-slate-600">{item.details}</p>}
           {s.late > 0 && prevEnd !== null && (
-            <p className="mt-2 rounded-lg bg-rose-50 px-2.5 py-1.5 text-xs text-rose-700">
-              ⚠️ ไม่ทัน — รายการก่อนหน้าจบ {formatTime(prevEnd)} ช้าไป {formatDuration(s.late)}
+            <p className="mt-2 rounded-xl bg-[#ff3b30]/10 px-2.5 py-1.5 text-xs text-[#d70015]">
+              ไม่ทัน — รายการก่อนหน้าจบ {formatTime(prevEnd)} ช้าไป {formatDuration(s.late)}
             </p>
           )}
         </div>
@@ -122,7 +123,7 @@ function TravelRow({
       <div className="relative flex w-4 shrink-0 justify-center">
         <span className="absolute inset-y-0 border-l-2 border-dashed border-slate-300" />
       </div>
-      <div className="mb-2 flex min-w-0 flex-1 flex-wrap items-start gap-x-2 rounded-lg border border-dashed border-slate-300 bg-slate-50/80 px-3 py-2 text-sm">
+      <div className="mb-2 flex min-w-0 flex-1 flex-wrap items-start gap-x-2 rounded-2xl border border-dashed border-black/10 px-3.5 py-2 text-sm">
         <button type="button" onClick={onEdit} className="min-w-0 basis-full text-left sm:flex-1 sm:basis-0">
           <span className="font-medium text-slate-700">
             {mode.emoji} {mode.label} · {formatDuration(item.duration_min)}
@@ -185,40 +186,40 @@ export function PlanEditor({
       <AppHeader />
 
       <main className={`${pageCls} py-5`}>
-        <div className="max-w-3xl">
-          <Link href="/plans" className="text-sm text-slate-500 hover:text-slate-800">← แผนทั้งหมด</Link>
-
-          <div className="mt-2 flex items-start gap-3">
-            <div className="min-w-0 flex-1">
-              <h1 className="text-xl font-bold leading-snug break-words">{plan.title}</h1>
-              <p className="mt-1 text-sm text-slate-500">
-                🗓️ {first ? `${first}${last ? ` – ${last}` : ""}` : "ยังไม่กำหนดวัน"} · {plan.day_count} วัน
-              </p>
-            </div>
-            <button onClick={() => setEditingPlan(true)} className={`${ghostBtn} shrink-0`}>แก้ไขแผน</button>
-          </div>
+        <div className="mx-auto max-w-3xl">
+          <PageTitle
+            back={{ href: "/plans", label: "แผนทั้งหมด" }}
+            title={plan.title}
+            subtitle={
+              <span className="flex items-center gap-1.5">
+                <CalendarIcon className="size-4 text-slate-400" />
+                {first ? `${first}${last ? ` – ${last}` : ""}` : "ยังไม่กำหนดวัน"} · {plan.day_count} วัน
+              </span>
+            }
+            actions={<button onClick={() => setEditingPlan(true)} className={ghostBtn}><PencilIcon className="size-4" />แก้ไขแผน</button>}
+          />
 
           {trip && (
             <Link
               href={`/?trip=${trip.id}`}
-              className="mt-3 flex items-center gap-2 rounded-xl border border-sky-100 bg-sky-50 px-3 py-2 text-sm text-sky-900 transition hover:border-sky-200"
+              className={`${surfaceCls} mt-4 flex items-center gap-3 rounded-2xl px-3.5 py-2.5 text-sm transition hover:shadow-lift`}
             >
-              <span aria-hidden>{categoryOf(trip.category).emoji}</span>
+              <span aria-hidden className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-slate-100">{categoryOf(trip.category).emoji}</span>
               <span className="min-w-0 flex-1 truncate">
-                <span className="text-sky-600">ทริป: </span>
+                <span className="text-slate-500">ทริป: </span>
                 <span className="font-medium">{trip.title}</span>
-                {formatDateRange(trip.start_date, trip.end_date) && <span className="text-sky-700"> · {formatDateRange(trip.start_date, trip.end_date)}</span>}
+                {formatDateRange(trip.start_date, trip.end_date) && <span className="text-slate-500"> · {formatDateRange(trip.start_date, trip.end_date)}</span>}
               </span>
-              <span className="shrink-0 text-xs text-sky-600">เปิดการ์ด →</span>
+              <span className="flex shrink-0 items-center text-xs font-medium text-sky-600">เปิดการ์ด<ChevronRightIcon className="size-3.5" /></span>
             </Link>
           )}
 
-          {plan.note && <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-sm whitespace-pre-line text-amber-900">📝 {plan.note}</p>}
+          {plan.note && <p className="mt-3 rounded-2xl bg-[#ffcc00]/15 px-3.5 py-2.5 text-sm whitespace-pre-line text-[#7a5c00]">{plan.note}</p>}
 
           {plan.day_count > 1 && (
-            <nav className="sticky top-[61px] z-[5] -mx-4 mt-4 flex gap-1.5 overflow-x-auto bg-[#f4f7fb]/90 px-4 py-2 backdrop-blur" aria-label="ไปยังวัน">
+            <nav className="sticky top-[61px] z-[5] -mx-4 mt-4 flex gap-1.5 overflow-x-auto bg-[#f5f5f7]/85 px-4 py-2 backdrop-blur-xl sm:-mx-6 sm:px-6" aria-label="ไปยังวัน">
               {days.map((d) => (
-                <a key={d.day} href={`#day-${d.day}`} className="shrink-0 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600 hover:border-sky-300 hover:text-sky-700">
+                <a key={d.day} href={`#day-${d.day}`} className="shrink-0 rounded-full bg-white px-3.5 py-1.5 text-xs font-medium text-slate-600 ring-1 ring-black/[0.06] transition hover:text-sky-600 hover:ring-sky-600/40">
                   วันที่ {d.day}
                 </a>
               ))}
@@ -229,9 +230,9 @@ export function PlanEditor({
             {days.map(({ day, scheduled, summary }) => {
               const lastEnd = scheduled.at(-1)?.end ?? null;
               return (
-                <section key={day} id={`day-${day}`} className="scroll-mt-28 rounded-2xl border border-slate-200 bg-white/60 p-3 sm:p-4">
+                <section key={day} id={`day-${day}`} className="scroll-mt-28 rounded-[28px] bg-black/[0.035] p-3 sm:p-4">
                   <div className="mb-3 flex flex-wrap items-baseline gap-x-2">
-                    <h2 className="font-bold">วันที่ {day}</h2>
+                    <h2 className="text-[17px] font-semibold">วันที่ {day}</h2>
                     {dayDateLabel(plan.start_date, day) && <span className="text-sm text-slate-500">{dayDateLabel(plan.start_date, day)}</span>}
                     {summary.start !== null && (
                       <span className="ml-auto text-xs text-slate-500">
@@ -242,7 +243,7 @@ export function PlanEditor({
                   </div>
 
                   {scheduled.length === 0 ? (
-                    <p className="rounded-xl border-2 border-dashed border-slate-200 px-3 py-6 text-center text-sm text-slate-400">ยังไม่มีกำหนดการของวันนี้</p>
+                    <p className="rounded-2xl border border-dashed border-black/10 px-3 py-6 text-center text-sm text-slate-400">ยังไม่มีกำหนดการของวันนี้</p>
                   ) : (
                     <ol>
                       {scheduled.map((s, i) => {
@@ -262,7 +263,7 @@ export function PlanEditor({
                               <button
                                 type="button"
                                 onClick={() => setDraft({ kind: "travel", day, beforeId: s.item.id, autoStart: prevEnd })}
-                                className="rounded-md px-2 py-0.5 text-xs text-slate-400 transition hover:bg-sky-50 hover:text-sky-700"
+                                className="rounded-full px-2.5 py-0.5 text-xs text-slate-400 transition hover:bg-white hover:text-sky-600"
                               >
                                 + เวลาเดินทาง
                               </button>
@@ -270,7 +271,7 @@ export function PlanEditor({
                           ),
                           s.gap > 0 && (
                             <Connector key={`g${s.item.id}`}>
-                              <span className="text-xs text-emerald-700">☕ ว่าง {formatDuration(s.gap)}</span>
+                              <span className="text-xs text-[#248a3d]">☕ ว่าง {formatDuration(s.gap)}</span>
                             </Connector>
                           ),
                           s.item.kind === "travel" ? (
@@ -287,17 +288,17 @@ export function PlanEditor({
                     <button
                       type="button"
                       onClick={() => setDraft({ kind: "activity", day, autoStart: lastEnd })}
-                      className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-sm font-medium text-sky-700 transition hover:bg-sky-100"
+                      className="flex items-center gap-1.5 rounded-full bg-sky-600 px-3.5 py-1.5 text-sm font-medium text-white transition hover:bg-sky-700"
                     >
-                      + กิจกรรม
+                      <PlusIcon className="size-4" />กิจกรรม
                     </button>
                     <button
                       type="button"
                       onClick={() => setDraft({ kind: "travel", day, autoStart: lastEnd })}
                       disabled={scheduled.length === 0}
-                      className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-40"
+                      className="flex items-center gap-1.5 rounded-full bg-white px-3.5 py-1.5 text-sm font-medium text-slate-700 ring-1 ring-black/[0.06] transition hover:bg-slate-50 disabled:opacity-40"
                     >
-                      + เดินทาง
+                      <PlusIcon className="size-4" />เดินทาง
                     </button>
                   </div>
                 </section>

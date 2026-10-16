@@ -2,7 +2,8 @@
 
 import { startTransition, useActionState, useEffect, useRef, useState, useTransition, type FormEvent } from "react";
 import { removeExpense, saveExpense } from "@/app/actions";
-import { dangerBtn, ghostBtn, inputCls, labelCls, MemberChip, primaryBtn } from "@/components/ui";
+import { XMarkIcon } from "@/components/icons";
+import { closeBtn, dangerBtn, ghostBtn, inputCls, labelCls, MemberChip, primaryBtn } from "@/components/ui";
 import {
   amountInput, EXPENSE_TITLE_MAX, formatBaht, parseAmount, splitAmount, type Expense,
 } from "@/lib/expenses";
@@ -85,7 +86,7 @@ export function ExpenseDialog({
       ref={ref}
       onClose={onClose}
       onClick={(e) => e.target === e.currentTarget && ref.current?.close()}
-      className="m-auto w-[calc(100%-2rem)] max-w-lg rounded-2xl bg-white p-0 text-slate-900 shadow-2xl backdrop:bg-transparent"
+      className="m-auto w-[calc(100%-2rem)] max-w-lg rounded-[28px] bg-white p-0 text-slate-900 shadow-2xl backdrop:bg-transparent"
     >
       <form onSubmit={onSubmit} className="flex max-h-[90dvh] flex-col">
         <input type="hidden" name="trip_id" value={tripId} />
@@ -94,10 +95,10 @@ export function ExpenseDialog({
         <input type="hidden" name="split_all" value={splitAll ? "1" : "0"} />
         {!splitAll && sharers.map((id) => <input key={id} type="hidden" name="share_ids" value={id} />)}
 
-        <header className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
-          <h2 className="font-semibold">{expense ? "แก้ไขรายการ" : "เพิ่มรายการค่าใช้จ่าย"}</h2>
-          <button type="button" onClick={() => ref.current?.close()} className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label="ปิด">
-            ✕
+        <header className="flex items-center justify-between border-b border-black/[0.06] px-5 py-3.5">
+          <h2 className="text-[17px] font-semibold">{expense ? "แก้ไขรายการ" : "เพิ่มรายการค่าใช้จ่าย"}</h2>
+          <button type="button" onClick={() => ref.current?.close()} className={closeBtn} aria-label="ปิด">
+            <XMarkIcon className="size-4" />
           </button>
         </header>
 
@@ -127,7 +128,7 @@ export function ExpenseDialog({
           </div>
 
           {choices.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-slate-300 px-4 py-3 text-sm text-slate-500">
+            <p className="rounded-2xl border border-dashed border-black/10 px-4 py-3 text-sm text-slate-500">
               ยังไม่มีรายชื่อแก๊ง — เพิ่มรายชื่อในหน้าตั้งค่าก่อนนะ
             </p>
           ) : (
@@ -155,8 +156,8 @@ export function ExpenseDialog({
                       type="button"
                       onClick={() => setSplitAll(o.all)}
                       aria-pressed={splitAll === o.all}
-                      className={`rounded-lg border px-2 py-1.5 text-sm font-medium transition ${
-                        splitAll === o.all ? "border-transparent bg-sky-50 text-sky-800 ring-2 ring-sky-400" : "border-slate-200 text-slate-500 hover:bg-slate-50"
+                      className={`rounded-full px-2 py-2 text-sm font-medium ring-1 transition ${
+                        splitAll === o.all ? "bg-sky-600/10 text-sky-700 ring-2 ring-sky-600/60" : "text-slate-500 ring-black/[0.08] hover:bg-slate-50"
                       }`}
                     >
                       {o.label}
@@ -187,7 +188,7 @@ export function ExpenseDialog({
             </>
           )}
 
-          <p className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
+          <p className="rounded-2xl bg-slate-100/70 px-4 py-3 text-sm text-slate-600">
             {each !== null && Number.isFinite(each) ? (
               <>
                 หาร <b>{splitIds.length}</b> คน · คนละ <b className="tabular-nums">฿{formatBaht(each)}</b>
@@ -199,7 +200,7 @@ export function ExpenseDialog({
           </p>
         </div>
 
-        <footer className="flex flex-wrap items-center gap-2 border-t border-slate-100 px-5 py-3">
+        <footer className="flex flex-wrap items-center gap-2 border-t border-black/[0.06] px-5 py-3">
           {expense && (
             <button type="button" onClick={onDelete} disabled={deleting || pending} className={dangerBtn}>
               {deleting ? "กำลังลบ…" : "ลบ"}
