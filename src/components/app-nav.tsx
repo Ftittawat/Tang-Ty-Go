@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
-import { BoardIcon, ChevronLeftIcon, GearIcon, MapIcon } from "@/components/icons";
+import { BoardIcon, ChevronLeftIcon, GearIcon, MapIcon, ShuttlecockIcon } from "@/components/icons";
 import { iconBtn, Logo, pageCls } from "@/components/ui";
 
 const TABS = [
@@ -38,6 +38,17 @@ export function AppNav() {
           );
         })}
       </nav>
+      {/* Same look as the tabs but its own pill: the badminton page is public and lives outside the board. */}
+      <Link
+        href="/badminton"
+        title="ตีแบด"
+        className="flex rounded-full bg-black/[0.05] p-1 text-sm"
+      >
+        <span className="flex items-center gap-1.5 rounded-full px-3.5 py-1.5 font-medium text-slate-500 transition hover:text-slate-900">
+          <ShuttlecockIcon className="size-4" />
+          <span className="max-sm:sr-only">ตีแบด</span>
+        </span>
+      </Link>
     </div>
   );
 }
