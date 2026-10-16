@@ -84,7 +84,7 @@ export function BadmintonBoard({
 
       <main className={`${pageCls} py-6`}>
         <div className="mb-5">
-          <PageTitle title="ตีแบด" subtitle="กดวันในปฏิทินเพื่อนัดหรือลงชื่อ — 1 วันนัดได้ 1 ครั้ง ไม่ต้องใช้รหัสผ่าน" />
+          <PageTitle title="ตีแบด" subtitle="กดวันในปฏิทินเพื่อนัดหรือลงชื่อ 1 วันนัดได้ 1 ครั้ง" />
         </div>
 
         <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
@@ -132,7 +132,7 @@ export function BadmintonBoard({
                 <span className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-[#34c759]/12 text-[#248a3d]">
                   <ShuttlecockIcon className="size-6" />
                 </span>
-                <p className="mt-3 text-sm text-slate-500">ยังไม่มีนัด — กดวันในปฏิทินหรือปุ่ม “เพิ่มรายการ” ได้เลย</p>
+                <p className="mt-3 text-sm text-slate-500">ยังไม่มีนัด กดวันในปฏิทินหรือปุ่ม “เพิ่มรายการ” ได้เลย</p>
               </div>
             ) : (
               <ul className="space-y-2">
