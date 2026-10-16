@@ -42,22 +42,34 @@ export function AppNav() {
   );
 }
 
+/** Logo + app name instead of the tabs, for the public badminton page (no password, so no tabs). */
+function AppBrand() {
+  return (
+    <Link href="/" aria-label="Tang-Ty Go — หน้าแรก" className="flex shrink-0 items-center gap-2.5">
+      <Logo className="size-9 shadow-card" />
+      <span className="text-[15px] font-semibold tracking-tight">Tang-Ty Go</span>
+    </Link>
+  );
+}
+
 /**
  * Sticky frosted top bar used by every page. Same width everywhere so the logo, tabs and
  * buttons stay put when switching pages. `children` go between the tabs and the gear.
  */
 export function AppHeader({
-  children, below, settings = true,
+  children, below, settings = true, tabs = true,
 }: {
   children?: ReactNode;
   /** Extra row inside the sticky bar (e.g. the board's filters on phones). */
   below?: ReactNode;
   settings?: boolean;
+  /** false on public pages: just the logo, no section tabs. */
+  tabs?: boolean;
 }) {
   return (
     <header className="sticky top-0 z-20 border-b border-black/[0.06] bg-[#f5f5f7]/75 backdrop-blur-xl backdrop-saturate-150">
       <div className={`${pageCls} flex flex-wrap items-center gap-x-2 gap-y-3 py-3`}>
-        <AppNav />
+        {tabs ? <AppNav /> : <AppBrand />}
         <div className="ml-auto flex items-center gap-2">
           {children}
           {settings && (

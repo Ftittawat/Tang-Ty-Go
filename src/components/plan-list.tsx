@@ -26,7 +26,7 @@ export function PlanList({ plans, trips }: { plans: PlanSummary[]; trips: Trip[]
 
       <main className={`${pageCls} py-6`}>
         <div className="mb-5">
-          <PageTitle title="แผนเที่ยว" subtitle="กำหนดการรายวันของแต่ละทริป — เวลา สถานที่ และเวลาเดินทางระหว่างจุด" />
+          <PageTitle title="แผนเที่ยว" subtitle="กำหนดการรายวันของแต่ละทริป เวลา สถานที่ และเวลาเดินทางระหว่างจุด" />
         </div>
 
         {plans.length === 0 ? (

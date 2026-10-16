@@ -10,6 +10,6 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Public: login page, static assets and icons.
-  matcher: ["/((?!login|_next/static|_next/image|.*\\.(?:ico|png|svg|webmanifest)$).*)"],
+  // Public: login page, the badminton sign-up page, static assets and icons.
+  matcher: ["/((?!login|badminton|_next/static|_next/image|.*\\.(?:ico|png|svg|webmanifest)$).*)"],
 };

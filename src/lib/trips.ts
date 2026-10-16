@@ -97,7 +97,16 @@ export function daysUntil(date: string | null, today = new Date()) {
   return Math.round((Date.UTC(y, m - 1, day) - t) / 86_400_000);
 }
 
-export type Member = { id: number; name: string };
+export const MEMBER_TAGS = [
+  { id: "general", label: "ทั่วไป", hint: "ทริป / กิจกรรม / หารบิล", on: "bg-sky-600/10 text-sky-700 ring-sky-600/40" },
+  { id: "badminton", label: "แบดมินตัน", hint: "ลงชื่อตีแบด", on: "bg-[#34c759]/12 text-[#248a3d] ring-[#34c759]/50" },
+] as const;
+
+/** Which pickers a name shows up in: "general" for trips and bills, "badminton" for the sign-up page. */
+export type MemberTag = (typeof MEMBER_TAGS)[number]["id"];
+export const isMemberTag = (v: unknown): v is MemberTag => MEMBER_TAGS.some((t) => t.id === v);
+
+export type Member = { id: number; name: string; tags: MemberTag[] };
 
 export const MEMBER_NAME_MAX = 40;
 

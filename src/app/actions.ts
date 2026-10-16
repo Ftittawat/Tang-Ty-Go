@@ -7,7 +7,7 @@ import { checkPassword, createSessionValue, requireAuth, SESSION_COOKIE } from "
 import * as store from "@/lib/db";
 import type { TripInput } from "@/lib/db";
 import { AMOUNT_MAX, EXPENSE_TITLE_MAX, parseAmount } from "@/lib/expenses";
-import { isCategory, isStatus, MEMBER_NAME_MAX, type Status } from "@/lib/trips";
+import { isCategory, isMemberTag, isStatus, MEMBER_NAME_MAX, type Status } from "@/lib/trips";
 
 export async function login(_prev: string | null, form: FormData) {
   if (!process.env.APP_PASSWORD) return "ยังไม่ได้ตั้งค่า APP_PASSWORD ในไฟล์ .env";
@@ -145,14 +145,30 @@ export async function addMembers(_prev: MemberFormState, form: FormData): Promis
   const tooLong = names.find((n) => n.length > MEMBER_NAME_MAX);
   if (tooLong) return { ok: false, message: `ชื่อยาวเกิน ${MEMBER_NAME_MAX} ตัวอักษร: ${tooLong}`, at: Date.now() };
 
-  const added = store.addMembers(names);
+  const tags = [...new Set(form.getAll("tags"))].filter(isMemberTag);
+  if (tags.length === 0) return { ok: false, message: "เลือกแท็กอย่างน้อย 1 อัน", at: Date.now() };
+
+  const { added, tagged } = store.addMembers(names, tags);
   revalidatePath("/", "layout");
-  const skipped = names.length - added;
+  const skipped = names.length - added - tagged;
+  const parts = [
+    added && `เพิ่ม ${added} คนแล้ว`,
+    tagged && `ติดแท็กให้ ${tagged} ชื่อที่มีอยู่แล้ว`,
+    added + tagged > 0 && skipped && `ข้าม ${skipped} ชื่อที่มีอยู่แล้ว`,
+  ].filter(Boolean);
   return {
-    ok: added > 0,
-    message: added === 0 ? "มีชื่อนี้อยู่แล้ว" : `เพิ่ม ${added} คนแล้ว${skipped ? ` (ข้าม ${skipped} ชื่อที่มีอยู่แล้ว)` : ""}`,
+    ok: added + tagged > 0,
+    message: parts.length ? parts.join(" · ") : "มีชื่อนี้อยู่แล้ว",
     at: Date.now(),
   };
+}
+
+export async function setMemberTags(id: number, rawTags: string[]) {
+  await requireAuth();
+  const tags = [...new Set(rawTags)].filter(isMemberTag);
+  if (tags.length === 0) return; // keep at least one; the UI blocks this too
+  store.setMemberTags(id, tags);
+  revalidatePath("/", "layout");
 }
 
 export async function renameMember(id: number, rawName: string): Promise<string | null> {

@@ -2,7 +2,8 @@ import Database from "better-sqlite3";
 import fs from "node:fs";
 import path from "node:path";
 import type { Expense } from "@/lib/expenses";
-import { sortKey, type Member, type Status, type Trip } from "@/lib/trips";
+import type { BadmintonSession } from "@/lib/badminton";
+import { isMemberTag, sortKey, type Member, type MemberTag, type Status, type Trip } from "@/lib/trips";
 
 export const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data");
 
@@ -16,11 +17,17 @@ export function db(): Database.Database {
   const d = new Database(path.join(DATA_DIR, "app.db"));
   d.pragma("journal_mode = WAL");
   d.pragma("foreign_keys = ON");
+  const hadTags = !!d.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'member_tags'").get();
   d.exec(`
     CREATE TABLE IF NOT EXISTS members (
       id         INTEGER PRIMARY KEY AUTOINCREMENT,
       name       TEXT NOT NULL UNIQUE COLLATE NOCASE,
       created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE TABLE IF NOT EXISTS member_tags (
+      member_id INTEGER NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+      tag       TEXT NOT NULL,
+      PRIMARY KEY (member_id, tag)
     );
     CREATE TABLE IF NOT EXISTS trips (
       id           INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -90,8 +97,27 @@ export function db(): Database.Database {
       member_id INTEGER NOT NULL REFERENCES members(id) ON DELETE CASCADE,
       PRIMARY KEY (trip_id, member_id)
     );
+    CREATE TABLE IF NOT EXISTS badminton_sessions (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      date         TEXT NOT NULL UNIQUE,
+      location     TEXT NOT NULL,
+      start_time   TEXT NOT NULL,
+      end_time     TEXT NOT NULL,
+      organizer_id INTEGER REFERENCES members(id) ON DELETE SET NULL,
+      courts       INTEGER NOT NULL DEFAULT 1,
+      created_at   TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at   TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE TABLE IF NOT EXISTS badminton_players (
+      session_id INTEGER NOT NULL REFERENCES badminton_sessions(id) ON DELETE CASCADE,
+      member_id  INTEGER NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+      created_at TEXT NOT NULL DEFAULT (${NOW}),
+      PRIMARY KEY (session_id, member_id)
+    );
   `);
   migrateFreeTextPeople(d);
+  // Everyone added before tags existed was picked for trips, so they start out as "general".
+  if (!hadTags) d.exec("INSERT OR IGNORE INTO member_tags (member_id, tag) SELECT id, 'general' FROM members");
   g.__db = d;
   return d;
 }
@@ -126,8 +152,12 @@ function migrateFreeTextPeople(d: Database.Database) {
 // ---------- members ----------
 
 export function listMembers(): Member[] {
-  const rows = db().prepare("SELECT id, name FROM members").all() as Member[];
-  return rows.sort((a, b) => a.name.localeCompare(b.name, "th"));
+  const rows = db()
+    .prepare("SELECT m.id, m.name, (SELECT json_group_array(tag) FROM member_tags WHERE member_id = m.id) AS tags FROM members m")
+    .all() as (Omit<Member, "tags"> & { tags: string })[];
+  return rows
+    .map((r) => ({ ...r, tags: (JSON.parse(r.tags) as string[]).filter(isMemberTag) }))
+    .sort((a, b) => a.name.localeCompare(b.name, "th"));
 }
 
 export function memberUsage(): Record<number, number> {
@@ -143,10 +173,36 @@ export function memberUsage(): Record<number, number> {
   return Object.fromEntries(rows.map((r) => [r.id, r.n]));
 }
 
-/** Inserts names that don't exist yet (case-insensitive); returns how many were added. */
-export function addMembers(names: string[]) {
-  const ins = db().prepare("INSERT OR IGNORE INTO members (name) VALUES (?)");
-  return db().transaction(() => names.reduce((n, name) => n + ins.run(name).changes, 0))();
+/**
+ * Inserts names that don't exist yet (case-insensitive) and gives every name the tags.
+ * Returns how many names were new, and how many existing names picked up a tag they lacked.
+ */
+export function addMembers(names: string[], tags: MemberTag[]) {
+  const d = db();
+  const ins = d.prepare("INSERT OR IGNORE INTO members (name) VALUES (?)");
+  const find = d.prepare("SELECT id FROM members WHERE name = ?");
+  const tag = d.prepare("INSERT OR IGNORE INTO member_tags (member_id, tag) VALUES (?, ?)");
+  return d.transaction(() => {
+    let added = 0;
+    let tagged = 0;
+    for (const name of names) {
+      const isNew = ins.run(name).changes > 0;
+      const { id } = find.get(name) as { id: number };
+      const gained = tags.reduce((n, t) => n + tag.run(id, t).changes, 0);
+      if (isNew) added++;
+      else if (gained) tagged++;
+    }
+    return { added, tagged };
+  })();
+}
+
+export function setMemberTags(id: number, tags: MemberTag[]) {
+  const d = db();
+  d.transaction(() => {
+    d.prepare("DELETE FROM member_tags WHERE member_id = ?").run(id);
+    const tag = d.prepare("INSERT OR IGNORE INTO member_tags (member_id, tag) VALUES (?, ?)");
+    for (const t of tags) tag.run(id, t);
+  })();
 }
 
 export function renameMember(id: number, name: string) {
@@ -306,4 +362,72 @@ export function setSettled(tripId: number, memberId: number, settled: boolean) {
       ? "INSERT OR IGNORE INTO trip_settled (trip_id, member_id) VALUES (?, ?)"
       : "DELETE FROM trip_settled WHERE trip_id = ? AND member_id = ?")
     .run(tripId, memberId);
+}
+
+// ---------- badminton ----------
+
+export type BadmintonInput = Omit<BadmintonSession, "id" | "player_ids">;
+
+const BADMINTON_SELECT = `
+  SELECT s.id, s.date, s.location, s.start_time, s.end_time, s.organizer_id, s.courts,
+    (SELECT json_group_array(member_id) FROM (
+      SELECT member_id FROM badminton_players WHERE session_id = s.id ORDER BY created_at, rowid
+    )) AS player_ids
+  FROM badminton_sessions s
+`;
+
+type BadmintonRow = Omit<BadmintonSession, "player_ids"> & { player_ids: string };
+const toBadminton = (r: BadmintonRow): BadmintonSession => ({ ...r, player_ids: JSON.parse(r.player_ids) as number[] });
+
+/** Sessions with from <= date <= to (YYYY-MM-DD), oldest first. */
+export function listBadmintonSessions(from: string, to: string): BadmintonSession[] {
+  return (db().prepare(`${BADMINTON_SELECT} WHERE s.date BETWEEN ? AND ? ORDER BY s.date`).all(from, to) as BadmintonRow[])
+    .map(toBadminton);
+}
+
+export function getBadmintonSession(id: number): BadmintonSession | null {
+  const row = db().prepare(`${BADMINTON_SELECT} WHERE s.id = ?`).get(id) as BadmintonRow | undefined;
+  return row ? toBadminton(row) : null;
+}
+
+export function badmintonSessionOn(date: string) {
+  return db().prepare("SELECT id FROM badminton_sessions WHERE date = ?").get(date) as { id: number } | undefined;
+}
+
+/** The organizer is signed up too: whoever books the court is almost always playing. */
+export function createBadmintonSession(input: BadmintonInput) {
+  const d = db();
+  return d.transaction(() => {
+    const id = Number(
+      d.prepare(`
+        INSERT INTO badminton_sessions (date, location, start_time, end_time, organizer_id, courts)
+        VALUES (@date, @location, @start_time, @end_time, @organizer_id, @courts)
+      `).run(input).lastInsertRowid,
+    );
+    if (input.organizer_id !== null) addBadmintonPlayer(id, input.organizer_id);
+    return id;
+  })();
+}
+
+export function updateBadmintonSession(id: number, input: BadmintonInput) {
+  db()
+    .prepare(`
+      UPDATE badminton_sessions
+      SET date = @date, location = @location, start_time = @start_time, end_time = @end_time,
+          organizer_id = @organizer_id, courts = @courts, updated_at = ${NOW}
+      WHERE id = @id
+    `)
+    .run({ ...input, id });
+}
+
+export function deleteBadmintonSession(id: number) {
+  db().prepare("DELETE FROM badminton_sessions WHERE id = ?").run(id);
+}
+
+export function addBadmintonPlayer(sessionId: number, memberId: number) {
+  db().prepare("INSERT OR IGNORE INTO badminton_players (session_id, member_id) VALUES (?, ?)").run(sessionId, memberId);
+}
+
+export function removeBadmintonPlayer(sessionId: number, memberId: number) {
+  db().prepare("DELETE FROM badminton_players WHERE session_id = ? AND member_id = ?").run(sessionId, memberId);
 }

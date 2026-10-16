@@ -28,7 +28,7 @@ export default function SettingsPage() {
               </span>
               <div>
                 <h2 className="font-semibold">รายชื่อแก๊ง</h2>
-                <p className="text-sm text-slate-500">ใช้เลือกเจ้าของทริปและคนที่ไปในการ์ดแต่ละใบ</p>
+                <p className="text-sm text-slate-500">แท็ก “ทั่วไป” ใช้เลือกคนในทริป / หารบิล — แท็ก “แบดมินตัน” ใช้ลงชื่อตีแบด</p>
               </div>
             </div>
             <MembersManager members={listMembers()} usage={memberUsage()} />

@@ -36,6 +36,10 @@ export function Board({
   const [overCol, setOverCol] = useState<Status | null>(null);
 
   const names = useMemo(() => new Map(members.map((m) => [m.id, m.name])), [members]);
+  // Only "general"-tagged names are offered for trips (plus anyone already on the trip being edited).
+  const general = useMemo(() => members.filter((m) => m.tags.includes("general")), [members]);
+  const dialogMembers = (t: Trip | null) =>
+    members.filter((m) => m.tags.includes("general") || t?.owner_id === m.id || t?.participant_ids.includes(m.id));
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -87,7 +91,7 @@ export function Board({
       </label>
       <select value={person} onChange={(e) => setPerson(e.target.value)} aria-label="กรองตามคน (เจ้าของหรือคนที่ไป)" className={`${searchField} ${selectCls}`}>
         <option value="">ทุกคน</option>
-        {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+        {general.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
       </select>
     </>
   );
@@ -218,7 +222,7 @@ export function Board({
           key={dialog.trip?.id ?? `new-${dialog.status}`}
           trip={dialog.trip}
           defaultStatus={dialog.status}
-          members={members}
+          members={dialogMembers(dialog.trip)}
           onClose={closeDialog}
         />
       )}
