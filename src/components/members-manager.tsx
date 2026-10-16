@@ -118,11 +118,11 @@ export function MembersManager({ members, usage }: { members: Member[]; usage: R
       )}
 
       {members.length === 0 ? (
-        <p className="mt-4 rounded-xl border-2 border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-400">
+        <p className="mt-4 rounded-2xl border border-dashed border-black/10 px-4 py-8 text-center text-sm text-slate-400">
           ยังไม่มีรายชื่อ — เพิ่มชื่อเพื่อนในแก๊งได้เลย
         </p>
       ) : (
-        <ul className="mt-3 divide-y divide-slate-100">
+        <ul className="mt-3 divide-y divide-black/[0.05]">
           {members.map((m) => (
             <MemberRow key={`${m.id}:${m.name}`} member={m} used={usage[m.id] ?? 0} />
           ))}

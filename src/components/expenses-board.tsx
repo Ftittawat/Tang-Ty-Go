@@ -1,19 +1,19 @@
 "use client";
 
-import Link from "next/link";
 import { startTransition, useCallback, useMemo, useOptimistic, useState } from "react";
 import { setExpenseShares, setSettled } from "@/app/actions";
-import { AppHeader } from "@/components/app-nav";
+import { AppHeader, PageTitle } from "@/components/app-nav";
+import { CheckIcon, CopyIcon, ExclamationIcon, PlusIcon } from "@/components/icons";
 import { ExpenseDialog } from "@/components/expense-dialog";
-import { Avatar, ghostBtn, pageCls, primaryBtn } from "@/components/ui";
+import { Avatar, ghostBtn, pageCls, primaryBtn, surfaceCls } from "@/components/ui";
 import { formatBaht, settle, sharersOf, splitAmount, type Balance, type Expense } from "@/lib/expenses";
 import { categoryOf, formatDateRange, type Member, type Trip } from "@/lib/trips";
 
 type DialogState = { expense: Expense | null; n: number } | null;
 
 function Net({ net }: { net: number }) {
-  if (net > 0) return <span className="font-semibold text-emerald-700">ได้คืน ฿{formatBaht(net)}</span>;
-  if (net < 0) return <span className="font-semibold text-rose-600">ต้องจ่าย ฿{formatBaht(-net)}</span>;
+  if (net > 0) return <span className="font-semibold text-[#248a3d]">ได้คืน ฿{formatBaht(net)}</span>;
+  if (net < 0) return <span className="font-semibold text-[#d70015]">ต้องจ่าย ฿{formatBaht(-net)}</span>;
   return <span className="text-slate-400">ลงตัวแล้ว</span>;
 }
 
@@ -115,48 +115,45 @@ export function ExpensesBoard({
       <AppHeader />
 
       <main className={`${pageCls} space-y-5 py-5`}>
-        <div>
-          <Link href="/" className="text-sm text-slate-500 hover:text-slate-800">← บอร์ด</Link>
-          <div className="mt-2 flex items-start gap-3">
-            <div className="min-w-0 flex-1">
-              <h1 className="text-xl font-bold leading-snug break-words">
-                <span aria-hidden>{cat.emoji}</span> {trip.title}
-              </h1>
-              <p className="mt-1 text-sm text-slate-500">💸 ค่าใช้จ่าย / หารบิล{dates && ` · ${dates}`}</p>
-            </div>
-            <button onClick={() => setDialog({ expense: null, n: 0 })} aria-label="เพิ่มรายการ" className={`${primaryBtn} shrink-0`}>
-              <span className="text-base leading-none">+</span> <span className="hidden sm:inline">เพิ่ม</span>รายการ
+        <PageTitle
+          back={{ href: "/", label: "บอร์ด" }}
+          title={<><span aria-hidden>{cat.emoji}</span> {trip.title}</>}
+          subtitle={`ค่าใช้จ่าย / หารบิล${dates ? ` · ${dates}` : ""}`}
+          actions={
+            <button onClick={() => setDialog({ expense: null, n: 0 })} aria-label="เพิ่มรายการ" className={primaryBtn}>
+              <PlusIcon className="size-4" /> <span className="hidden sm:inline">เพิ่ม</span>รายการ
             </button>
-          </div>
-        </div>
+          }
+        />
 
         <div className="grid grid-cols-3 gap-2 sm:gap-3">
-          <div className="rounded-2xl bg-gradient-to-br from-sky-600 to-teal-600 p-3 text-white sm:p-4 shadow-sm">
-            <p className="text-xs text-sky-100">ยอดรวม</p>
-            <p className="mt-1 text-lg font-bold tabular-nums sm:text-2xl">฿{formatBaht(result.total)}</p>
+          <div className="relative overflow-hidden rounded-3xl bg-linear-to-br from-[#bfeed2] via-[#e3f6ea] to-[#b9d6ff] p-3 shadow-card ring-1 ring-black/[0.04] sm:p-5">
+            <span aria-hidden className="pointer-events-none absolute -right-10 -top-16 size-40 rounded-full bg-[#34c759]/35 blur-3xl" />
+            <p className="relative text-xs font-semibold text-[#1e7a34]">ยอดรวม</p>
+            <p className="relative mt-1 text-lg font-semibold tracking-tight tabular-nums sm:text-3xl">฿{formatBaht(result.total)}</p>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
+          <div className={`${surfaceCls} p-3 sm:p-5`}>
             <p className="text-xs text-slate-500">รายการ</p>
-            <p className="mt-1 text-lg font-bold tabular-nums sm:text-2xl">{rows.length}</p>
+            <p className="mt-1 text-lg font-semibold tracking-tight tabular-nums sm:text-3xl">{rows.length}</p>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
+          <div className={`${surfaceCls} p-3 sm:p-5`}>
             <p className="text-xs text-slate-500">เคลียร์แล้ว</p>
-            <p className="mt-1 text-lg font-bold tabular-nums sm:text-2xl">
+            <p className="mt-1 text-lg font-semibold tracking-tight tabular-nums sm:text-3xl">
               {settledCount}<span className="text-sm font-medium text-slate-400">/{toSettle} คน</span>
             </p>
           </div>
         </div>
 
         {result.unsplit.length > 0 && (
-          <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            ⚠️ มี {result.unsplit.length} รายการที่ไม่มีคนจ่ายหรือไม่มีคนหาร (เช่น ลบชื่อออกจากแก๊งไปแล้ว) — ยังไม่นับในสรุป กดที่ชื่อรายการเพื่อแก้
+          <p className="flex items-start gap-2 rounded-2xl bg-[#ff9500]/10 px-4 py-3 text-sm text-[#c93400]">
+            <ExclamationIcon className="mt-0.5 size-4 shrink-0" />มี {result.unsplit.length} รายการที่ไม่มีคนจ่ายหรือไม่มีคนหาร (เช่น ลบชื่อออกจากแก๊งไปแล้ว) — ยังไม่นับในสรุป กดที่ชื่อรายการเพื่อแก้
           </p>
         )}
 
         {rows.length > 0 && (
           <div className="grid gap-5 lg:grid-cols-[1fr_22rem]">
-            <section className="min-w-0 rounded-2xl border border-slate-200 bg-white shadow-sm">
-              <h2 className="px-5 pt-4 font-semibold">สรุปยอดแต่ละคน</h2>
+            <section className={`${surfaceCls} min-w-0`}>
+              <h2 className="px-5 pt-5 text-[17px] font-semibold">สรุปยอดแต่ละคน</h2>
               <p className="px-5 text-sm text-slate-500">ติ๊ก “เคลียร์แล้ว” เมื่อโอนเงินกันเรียบร้อย</p>
               <div className="overflow-x-auto px-2 pb-2">
                 <table className="mt-2 w-full text-sm">
@@ -169,7 +166,7 @@ export function ExpensesBoard({
                       <th className="px-3 py-2 text-center font-medium">เคลียร์</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-black/[0.05]">
                     {balances.map((b) => {
                       const isDone = done.includes(b.member_id);
                       return (
@@ -193,7 +190,7 @@ export function ExpensesBoard({
                               checked={isDone}
                               onChange={() => toggleSettled(b.member_id)}
                               aria-label={`${nameOf(b.member_id)} เคลียร์แล้ว`}
-                              className="size-4 accent-emerald-600"
+                              className="size-4 accent-[#34c759]"
                             />
                           </td>
                         </tr>
@@ -204,16 +201,16 @@ export function ExpensesBoard({
               </div>
             </section>
 
-            <section className="min-w-0 self-start rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <section className={`${surfaceCls} min-w-0 self-start p-5`}>
               <div className="flex items-center gap-2">
-                <h2 className="font-semibold">ใครโอนให้ใคร</h2>
+                <h2 className="text-[17px] font-semibold">ใครโอนให้ใคร</h2>
                 <button onClick={copySummary} className={`${ghostBtn} ml-auto px-2.5 py-1 text-xs`}>
-                  {copied ? "คัดลอกแล้ว ✓" : "คัดลอกสรุป"}
+                  {copied ? <><CheckIcon className="size-3.5" />คัดลอกแล้ว</> : <><CopyIcon className="size-3.5" />คัดลอกสรุป</>}
                 </button>
               </div>
               <p className="mb-3 text-sm text-slate-500">โอนน้อยครั้งที่สุดให้ทุกคนลงตัว</p>
               {result.transfers.length === 0 ? (
-                <p className="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">ไม่ต้องโอน ลงตัวแล้ว 🎉</p>
+                <p className="rounded-2xl bg-[#34c759]/12 px-4 py-3 text-sm text-[#248a3d]">ไม่ต้องโอน ลงตัวแล้ว 🎉</p>
               ) : (
                 <ul className="space-y-2">
                   {result.transfers.map((t) => {
@@ -221,7 +218,7 @@ export function ExpensesBoard({
                     return (
                       <li
                         key={`${t.from}-${t.to}`}
-                        className={`flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 text-sm ${isDone ? "opacity-50" : ""}`}
+                        className={`flex items-center gap-2 rounded-2xl bg-slate-100/70 px-3 py-2.5 text-sm ${isDone ? "opacity-50" : ""}`}
                       >
                         <Avatar name={nameOf(t.from)!} />
                         <span className={`font-medium ${isDone ? "line-through" : ""}`}>{nameOf(t.from)}</span>
@@ -238,22 +235,22 @@ export function ExpensesBoard({
           </div>
         )}
 
-        <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="flex items-center gap-2 px-5 pt-4">
-            <h2 className="font-semibold">รายการค่าใช้จ่าย</h2>
+        <section className={`${surfaceCls} overflow-hidden`}>
+          <div className="flex items-center gap-2 px-5 pt-5">
+            <h2 className="text-[17px] font-semibold">รายการค่าใช้จ่าย</h2>
             <span className="text-sm text-slate-400">({rows.length})</span>
           </div>
           <p className="px-5 text-sm text-slate-500">ติ๊กช่องชื่อเพื่อเลือกว่าใครหารรายการไหน · กดชื่อรายการเพื่อแก้ไข</p>
 
           {rows.length === 0 ? (
-            <div className="m-5 rounded-xl border-2 border-dashed border-slate-200 px-4 py-10 text-center">
+            <div className="m-5 rounded-2xl border border-dashed border-black/10 px-4 py-10 text-center">
               <p className="text-sm text-slate-400">ยังไม่มีรายการ — จดบิลแรกเลย เช่น ค่าที่พัก ค่าน้ำมัน</p>
-              <button onClick={() => setDialog({ expense: null, n: 0 })} className={`${primaryBtn} mt-3`}>
-                + เพิ่มรายการแรก
+              <button onClick={() => setDialog({ expense: null, n: 0 })} className={`${primaryBtn} mt-4`}>
+                <PlusIcon className="size-4" />เพิ่มรายการแรก
               </button>
             </div>
           ) : (
-            <div className="mt-3 overflow-x-auto border-t border-slate-100">
+            <div className="mt-3 overflow-x-auto border-t border-black/[0.05]">
               <table className="w-full border-separate border-spacing-0 text-sm">
                 <thead>
                   <tr className="text-xs text-slate-500">
@@ -280,10 +277,10 @@ export function ExpensesBoard({
                       <tr key={e.id} className="group">
                         <td className="sticky left-0 z-10 border-b border-slate-100 bg-white px-4 py-2 group-hover:bg-slate-50">
                           <button onClick={() => setDialog({ expense: e, n: 0 })} className="block w-full text-left">
-                            <span className="block font-medium hover:text-sky-700 hover:underline">{e.title}</span>
+                            <span className="block font-medium hover:text-sky-600">{e.title}</span>
                             <span className="flex items-center gap-1 text-xs text-slate-500">
                               {payer ? <>จ่ายโดย <span className="font-medium text-slate-700">{payer}</span></> : <span className="text-amber-700">ยังไม่ระบุคนจ่าย</span>}
-                              {e.split_all && <span className="rounded bg-sky-50 px-1 text-[10px] font-medium text-sky-700">หารทุกคน</span>}
+                              {e.split_all && <span className="rounded-full bg-sky-600/10 px-1.5 text-[10px] font-medium text-sky-700">หารทุกคน</span>}
                             </span>
                           </button>
                         </td>
@@ -298,7 +295,7 @@ export function ExpensesBoard({
                               onChange={() => toggleShare(e, id)}
                               aria-label={`${nameOf(id)} หาร ${e.title}`}
                               title={parts.has(id) ? `฿${formatBaht(parts.get(id)!)}` : undefined}
-                              className="size-4 accent-sky-600"
+                              className="size-4 accent-[#007aff]"
                             />
                           </td>
                         ))}

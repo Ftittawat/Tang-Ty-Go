@@ -120,7 +120,7 @@ export function PlanForm({
         </div>
       </div>
 
-      <footer className="flex items-center gap-2 border-t border-slate-100 px-5 py-3">
+      <footer className="flex items-center gap-2 border-t border-black/[0.06] px-5 py-3">
         {footerStart}
         {state?.error && <p className="min-w-0 flex-1 text-sm text-rose-600">{state.error}</p>}
         <div className="ml-auto flex gap-2">

@@ -4,7 +4,8 @@ import { startTransition, useActionState, useEffect, useRef, useState, useTransi
 import { removeTrip, saveTrip } from "@/app/actions";
 import { openPlanForTrip } from "@/app/plan-actions";
 import Link from "next/link";
-import { dangerBtn, ghostBtn, inputCls, labelCls, MemberChip, primaryBtn } from "@/components/ui";
+import { BanknoteIcon, CalendarIcon, ChevronRightIcon, MapIcon, XMarkIcon } from "@/components/icons";
+import { closeBtn, dangerBtn, ghostBtn, inputCls, labelCls, MemberChip, primaryBtn } from "@/components/ui";
 import { formatBaht } from "@/lib/expenses";
 import { be, CATEGORIES, MONTHS_TH_FULL, STATUSES, type Member, type Status, type Trip } from "@/lib/trips";
 
@@ -88,7 +89,7 @@ export function TripDialog({
       ref={ref}
       onClose={onClose}
       onClick={(e) => e.target === e.currentTarget && ref.current?.close()}
-      className="m-auto w-[calc(100%-2rem)] max-w-xl rounded-2xl bg-white p-0 text-slate-900 shadow-2xl backdrop:bg-transparent"
+      className="m-auto w-[calc(100%-2rem)] max-w-xl rounded-[28px] bg-white p-0 text-slate-900 shadow-2xl backdrop:bg-transparent"
     >
       <form onSubmit={onSubmit} className="flex max-h-[90dvh] flex-col">
         {trip && <input type="hidden" name="id" value={trip.id} />}
@@ -96,21 +97,22 @@ export function TripDialog({
         {ownerId !== null && <input type="hidden" name="owner_id" value={ownerId} />}
         {goers.map((id) => <input key={id} type="hidden" name="participant_ids" value={id} />)}
 
-        <header className="flex items-center gap-2 border-b border-slate-100 px-5 py-3.5">
-          <h2 className="font-semibold">{trip ? "แก้ไขทริป" : "เพิ่มทริป / กิจกรรมใหม่"}</h2>
+        <header className="flex items-center gap-2 border-b border-black/[0.06] px-5 py-3.5">
+          <h2 className="text-[17px] font-semibold">{trip ? "แก้ไขทริป" : "เพิ่มทริป / กิจกรรมใหม่"}</h2>
           {trip && (
             <button
               type="button"
               disabled={openingPlan}
               onClick={() => startOpenPlan(() => openPlanForTrip(trip.id))}
-              className="ml-auto rounded-lg bg-violet-50 px-2.5 py-1 text-xs font-medium text-violet-700 transition hover:bg-violet-100 disabled:opacity-60"
+              className="ml-auto flex items-center gap-1.5 rounded-full bg-sky-600/10 px-3 py-1.5 text-xs font-medium text-sky-700 transition hover:bg-sky-600/15 disabled:opacity-60"
               title={trip.plan_id ? "เปิดแผนเที่ยวของทริปนี้" : "สร้างแผนเที่ยวจากวันที่ของทริปนี้"}
             >
-              {openingPlan ? "กำลังเปิด…" : trip.plan_id ? "🗺️ แผนเที่ยว →" : "🗺️ สร้างแผนเที่ยว"}
+              <MapIcon className="size-3.5" />
+              {openingPlan ? "กำลังเปิด…" : trip.plan_id ? "แผนเที่ยว" : "สร้างแผนเที่ยว"}
             </button>
           )}
-          <button type="button" onClick={() => ref.current?.close()} className={`rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 ${trip ? "" : "ml-auto"}`} aria-label="ปิด">
-            ✕
+          <button type="button" onClick={() => ref.current?.close()} className={`${closeBtn} ${trip ? "" : "ml-auto"}`} aria-label="ปิด">
+            <XMarkIcon className="size-4" />
           </button>
         </header>
 
@@ -131,8 +133,8 @@ export function TripDialog({
                   type="button"
                   onClick={() => setStatus(s.id)}
                   aria-pressed={status === s.id}
-                  className={`flex items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 text-xs font-medium transition ${
-                    status === s.id ? `border-transparent ${s.tint} ring-2 ${s.ring}` : "border-slate-200 text-slate-500 hover:bg-slate-50"
+                  className={`flex items-center justify-center gap-1.5 rounded-full px-2 py-2 text-xs font-medium ring-1 transition ${
+                    status === s.id ? `${s.soft} ${s.text} ring-2 ${s.ring}` : "text-slate-500 ring-black/[0.08] hover:bg-slate-50"
                   }`}
                 >
                   <span className={`size-2 rounded-full ${s.dot}`} />
@@ -157,8 +159,8 @@ export function TripDialog({
             </div>
           </div>
 
-          <div className="rounded-xl bg-slate-50 p-3">
-            <p className="mb-2 text-xs font-medium text-slate-600">🗓️ วันที่ไป <span className="font-normal text-slate-400">(ถ้ารู้แล้ว)</span></p>
+          <div className="rounded-2xl bg-slate-100/70 p-3.5">
+            <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-slate-600"><CalendarIcon className="size-4 text-slate-400" />วันที่ไป <span className="font-normal text-slate-400">(ถ้ารู้แล้ว)</span></p>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label htmlFor="start_date" className={labelCls}>เริ่ม</label>
@@ -169,7 +171,7 @@ export function TripDialog({
                 <input id="end_date" name="end_date" type="date" min={start || undefined} defaultValue={trip?.end_date ?? ""} className={inputCls} />
               </div>
             </div>
-            <p className="mb-2 mt-3 text-xs font-medium text-slate-600">🎯 เป้าหมายคร่าวๆ <span className="font-normal text-slate-400">(ถ้ายังไม่ล็อกวัน)</span></p>
+            <p className="mb-2 mt-3 text-xs font-medium text-slate-600">เป้าหมายคร่าวๆ <span className="font-normal text-slate-400">(ถ้ายังไม่ล็อกวัน)</span></p>
             <div className="grid grid-cols-2 gap-3">
               <select name="target_month" aria-label="เดือนเป้าหมาย" defaultValue={trip?.target_month ?? ""} className={inputCls}>
                 <option value="">— เดือน —</option>
@@ -187,7 +189,7 @@ export function TripDialog({
           </div>
 
           {members.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-slate-300 px-4 py-3 text-sm text-slate-500">
+            <p className="rounded-2xl border border-dashed border-black/10 px-4 py-3 text-sm text-slate-500">
               ยังไม่มีรายชื่อแก๊ง —{" "}
               <Link href="/settings" className="font-medium text-sky-700 underline underline-offset-2">
                 เพิ่มรายชื่อในหน้าตั้งค่า
@@ -211,7 +213,7 @@ export function TripDialog({
                   <button
                     type="button"
                     onClick={() => setGoers(allGoing ? [] : members.map((m) => m.id))}
-                    className="ml-auto rounded px-1.5 text-xs font-medium text-sky-700 hover:bg-sky-50"
+                    className="ml-auto rounded-full px-2 text-xs font-medium text-sky-600 hover:bg-sky-50"
                   >
                     {allGoing ? "ล้าง" : "เลือกทุกคน"}
                   </button>
@@ -228,16 +230,18 @@ export function TripDialog({
           {trip && (
             <Link
               href={`/trips/${trip.id}/expenses`}
-              className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm transition hover:bg-emerald-100"
+              className="flex items-center gap-3 rounded-2xl bg-slate-100/70 px-3.5 py-3 text-sm transition hover:bg-slate-100"
             >
-              <span className="text-xl" aria-hidden>💸</span>
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[#34c759] text-white">
+                <BanknoteIcon className="size-5" />
+              </span>
               <span className="min-w-0 flex-1">
-                <span className="block font-medium text-emerald-900">ค่าใช้จ่าย / หารบิล</span>
-                <span className="block text-xs text-emerald-700">
+                <span className="block font-medium">ค่าใช้จ่าย / หารบิล</span>
+                <span className="block text-xs text-slate-500">
                   {trip.expense_total > 0 ? `รวม ฿${formatBaht(trip.expense_total)} — ดูว่าใครต้องจ่ายเท่าไหร่` : "จดบิลที่จ่ายไป แล้วให้ระบบคิดว่าใครต้องโอนให้ใคร"}
                 </span>
               </span>
-              <span className="text-emerald-700" aria-hidden>→</span>
+              <ChevronRightIcon className="size-4 shrink-0 text-slate-400" />
             </Link>
           )}
 
@@ -258,7 +262,7 @@ export function TripDialog({
           </div>
         </div>
 
-        <footer className="flex items-center gap-2 border-t border-slate-100 px-5 py-3">
+        <footer className="flex items-center gap-2 border-t border-black/[0.06] px-5 py-3">
           {trip && (
             <button type="button" onClick={onDelete} disabled={deleting || pending} className={dangerBtn}>
               {deleting ? "กำลังลบ…" : "ลบ"}
