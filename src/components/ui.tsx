@@ -4,6 +4,9 @@ import type { Member } from "@/lib/trips";
 /** Page frame shared by the header and every page's content, so widths never jump between pages. */
 export const pageCls = "mx-auto w-full max-w-[1400px] px-4 sm:px-6";
 
+/** From lg up, makes a dialog as wide as the content inside pageCls (frame minus its gutters). */
+export const pageWideDialogCls = "lg:w-[calc(100%-3rem)] lg:max-w-[calc(1400px-3rem)]";
+
 /** White rounded surface used for cards and page sections. */
 export const surfaceCls = "rounded-3xl bg-white shadow-card ring-1 ring-black/[0.04]";
 

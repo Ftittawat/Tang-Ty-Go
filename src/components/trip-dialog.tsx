@@ -5,7 +5,7 @@ import { removeTrip, saveTrip } from "@/app/actions";
 import { openPlanForTrip } from "@/app/plan-actions";
 import Link from "next/link";
 import { BanknoteIcon, CalendarIcon, ChevronRightIcon, MapIcon, XMarkIcon } from "@/components/icons";
-import { closeBtn, dangerBtn, ghostBtn, inputCls, labelCls, MemberChip, primaryBtn } from "@/components/ui";
+import { closeBtn, dangerBtn, ghostBtn, inputCls, labelCls, MemberChip, pageWideDialogCls, primaryBtn } from "@/components/ui";
 import { formatBaht } from "@/lib/expenses";
 import { be, CATEGORIES, MONTHS_TH_FULL, STATUSES, type Member, type Status, type Trip } from "@/lib/trips";
 
@@ -89,7 +89,7 @@ export function TripDialog({
       ref={ref}
       onClose={onClose}
       onClick={(e) => e.target === e.currentTarget && ref.current?.close()}
-      className="m-auto w-[calc(100%-2rem)] max-w-xl rounded-[28px] bg-white p-0 text-slate-900 shadow-2xl backdrop:bg-transparent"
+      className={`m-auto w-[calc(100%-2rem)] max-w-xl ${pageWideDialogCls} rounded-[28px] bg-white p-0 text-slate-900 shadow-2xl backdrop:bg-transparent`}
     >
       <form onSubmit={onSubmit} className="flex max-h-[90dvh] flex-col">
         {trip && <input type="hidden" name="id" value={trip.id} />}
@@ -116,149 +116,153 @@ export function TripDialog({
           </button>
         </header>
 
-        <div className="space-y-4 overflow-y-auto px-5 py-4">
-          <div>
-            <label htmlFor="title" className={labelCls}>
-              ชื่อทริป / กิจกรรม <span className="text-rose-500">*</span>
-            </label>
-            <input id="title" name="title" required maxLength={120} defaultValue={trip?.title} autoFocus placeholder="เช่น เขาใหญ่ แคมป์ปิ้งปีใหม่" className={inputCls} />
-          </div>
-
-          <fieldset>
-            <legend className={labelCls}>สถานะ</legend>
-            <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
-              {STATUSES.map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => setStatus(s.id)}
-                  aria-pressed={status === s.id}
-                  className={`flex items-center justify-center gap-1.5 rounded-full px-2 py-2 text-xs font-medium ring-1 transition ${
-                    status === s.id ? `${s.soft} ${s.text} ring-2 ${s.ring}` : "text-slate-500 ring-black/[0.08] hover:bg-slate-50"
-                  }`}
-                >
-                  <span className={`size-2 rounded-full ${s.dot}`} />
-                  {s.label}
-                </button>
-              ))}
-            </div>
-          </fieldset>
-
-          <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 overflow-y-auto px-5 py-4 lg:grid-cols-2 lg:items-start lg:gap-x-8 lg:px-6 lg:py-5">
+          <div className="min-w-0 space-y-4">
             <div>
-              <label htmlFor="category" className={labelCls}>ประเภท</label>
-              <select id="category" name="category" defaultValue={trip?.category ?? "trip"} className={inputCls}>
-                {CATEGORIES.map((c) => (
-                  <option key={c.id} value={c.id}>{c.emoji} {c.label}</option>
-                ))}
-              </select>
+              <label htmlFor="title" className={labelCls}>
+                ชื่อทริป / กิจกรรม <span className="text-rose-500">*</span>
+              </label>
+              <input id="title" name="title" required maxLength={120} defaultValue={trip?.title} autoFocus placeholder="เช่น เขาใหญ่ แคมป์ปิ้งปีใหม่" className={inputCls} />
             </div>
-            <div>
-              <label htmlFor="location" className={labelCls}>สถานที่</label>
-              <input id="location" name="location" maxLength={200} defaultValue={trip?.location ?? ""} placeholder="เช่น อช.เขาใหญ่, นครราชสีมา" className={inputCls} />
-            </div>
-          </div>
 
-          <div className="rounded-2xl bg-slate-100/70 p-3.5">
-            <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-slate-600"><CalendarIcon className="size-4 text-slate-400" />วันที่ไป <span className="font-normal text-slate-400">(ถ้ารู้แล้ว)</span></p>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label htmlFor="start_date" className={labelCls}>เริ่ม</label>
-                <input id="start_date" name="start_date" type="date" value={start} onChange={(e) => setStart(e.target.value)} className={inputCls} />
-              </div>
-              <div>
-                <label htmlFor="end_date" className={labelCls}>ถึง</label>
-                <input id="end_date" name="end_date" type="date" min={start || undefined} defaultValue={trip?.end_date ?? ""} className={inputCls} />
-              </div>
-            </div>
-            <p className="mb-2 mt-3 text-xs font-medium text-slate-600">เป้าหมายคร่าวๆ <span className="font-normal text-slate-400">(ถ้ายังไม่ล็อกวัน)</span></p>
-            <div className="grid grid-cols-2 gap-3">
-              <select name="target_month" aria-label="เดือนเป้าหมาย" defaultValue={trip?.target_month ?? ""} className={inputCls}>
-                <option value="">— เดือน —</option>
-                {MONTHS_TH_FULL.map((m, i) => (
-                  <option key={m} value={i + 1}>{m}</option>
-                ))}
-              </select>
-              <select name="target_year" aria-label="ปีเป้าหมาย" defaultValue={trip?.target_year ?? ""} className={inputCls}>
-                <option value="">— ปี —</option>
-                {[...years].sort().map((y) => (
-                  <option key={y} value={y}>{be(y)} ({y})</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {members.length === 0 ? (
-            <p className="rounded-2xl border border-dashed border-black/10 px-4 py-3 text-sm text-slate-500">
-              ยังไม่มีรายชื่อแก๊ง —{" "}
-              <Link href="/settings" className="font-medium text-sky-700 underline underline-offset-2">
-                เพิ่มรายชื่อในหน้าตั้งค่า
-              </Link>{" "}
-              แล้วกลับมาเลือกเจ้าของทริปและคนที่ไปได้เลย
-            </p>
-          ) : (
-            <>
-              <fieldset>
-                <legend className={labelCls}>เจ้าของทริป (Owner)</legend>
-                <div className="flex flex-wrap gap-1.5">
-                  {members.map((m) => (
-                    <MemberChip key={m.id} member={m} selected={ownerId === m.id} onClick={() => pickOwner(m.id)} />
-                  ))}
-                </div>
-              </fieldset>
-
-              <fieldset>
-                <legend className={`${labelCls} flex w-full items-center`}>
-                  ใครไปบ้าง <span className="ml-1 font-normal text-slate-400">({goers.length} คน)</span>
+            <fieldset>
+              <legend className={labelCls}>สถานะ</legend>
+              <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+                {STATUSES.map((s) => (
                   <button
+                    key={s.id}
                     type="button"
-                    onClick={() => setGoers(allGoing ? [] : members.map((m) => m.id))}
-                    className="ml-auto rounded-full px-2 text-xs font-medium text-sky-600 hover:bg-sky-50"
+                    onClick={() => setStatus(s.id)}
+                    aria-pressed={status === s.id}
+                    className={`flex items-center justify-center gap-1.5 rounded-full px-2 py-2 text-xs font-medium ring-1 transition ${
+                      status === s.id ? `${s.soft} ${s.text} ring-2 ${s.ring}` : "text-slate-500 ring-black/[0.08] hover:bg-slate-50"
+                    }`}
                   >
-                    {allGoing ? "ล้าง" : "เลือกทุกคน"}
+                    <span className={`size-2 rounded-full ${s.dot}`} />
+                    {s.label}
                   </button>
-                </legend>
-                <div className="flex flex-wrap gap-1.5">
-                  {members.map((m) => (
-                    <MemberChip key={m.id} member={m} selected={goers.includes(m.id)} onClick={() => toggleGoer(m.id)} />
+                ))}
+              </div>
+            </fieldset>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor="category" className={labelCls}>ประเภท</label>
+                <select id="category" name="category" defaultValue={trip?.category ?? "trip"} className={inputCls}>
+                  {CATEGORIES.map((c) => (
+                    <option key={c.id} value={c.id}>{c.emoji} {c.label}</option>
                   ))}
-                </div>
-              </fieldset>
-            </>
-          )}
-
-          {trip && (
-            <Link
-              href={`/trips/${trip.id}/expenses`}
-              className="flex items-center gap-3 rounded-2xl bg-slate-100/70 px-3.5 py-3 text-sm transition hover:bg-slate-100"
-            >
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[#34c759] text-white">
-                <BanknoteIcon className="size-5" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block font-medium">ค่าใช้จ่าย / หารบิล</span>
-                <span className="block text-xs text-slate-500">
-                  {trip.expense_total > 0 ? `รวม ฿${formatBaht(trip.expense_total)} — ดูว่าใครต้องจ่ายเท่าไหร่` : "จดบิลที่จ่ายไป แล้วให้ระบบคิดว่าใครต้องโอนให้ใคร"}
-                </span>
-              </span>
-              <ChevronRightIcon className="size-4 shrink-0 text-slate-400" />
-            </Link>
-          )}
-
-          <div className="grid gap-4 sm:grid-cols-[10rem_1fr]">
-            <div>
-              <label htmlFor="budget" className={labelCls}>งบประมาณ (บาท/คน)</label>
-              <input id="budget" name="budget" inputMode="numeric" defaultValue={trip?.budget ?? ""} placeholder="เช่น 3500" className={inputCls} />
+                </select>
+              </div>
+              <div>
+                <label htmlFor="location" className={labelCls}>สถานที่</label>
+                <input id="location" name="location" maxLength={200} defaultValue={trip?.location ?? ""} placeholder="เช่น อช.เขาใหญ่, นครราชสีมา" className={inputCls} />
+              </div>
             </div>
-            <div>
-              <label htmlFor="link" className={labelCls}>ลิงก์อ้างอิง</label>
-              <input id="link" name="link" type="text" inputMode="url" maxLength={1000} defaultValue={trip?.link ?? ""} placeholder="ที่พัก, รีวิว, Google Maps…" className={inputCls} />
+
+            <div className="rounded-2xl bg-slate-100/70 p-3.5">
+              <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-slate-600"><CalendarIcon className="size-4 text-slate-400" />วันที่ไป <span className="font-normal text-slate-400">(ถ้ารู้แล้ว)</span></p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label htmlFor="start_date" className={labelCls}>เริ่ม</label>
+                  <input id="start_date" name="start_date" type="date" value={start} onChange={(e) => setStart(e.target.value)} className={inputCls} />
+                </div>
+                <div>
+                  <label htmlFor="end_date" className={labelCls}>ถึง</label>
+                  <input id="end_date" name="end_date" type="date" min={start || undefined} defaultValue={trip?.end_date ?? ""} className={inputCls} />
+                </div>
+              </div>
+              <p className="mb-2 mt-3 text-xs font-medium text-slate-600">เป้าหมายคร่าวๆ <span className="font-normal text-slate-400">(ถ้ายังไม่ล็อกวัน)</span></p>
+              <div className="grid grid-cols-2 gap-3">
+                <select name="target_month" aria-label="เดือนเป้าหมาย" defaultValue={trip?.target_month ?? ""} className={inputCls}>
+                  <option value="">— เดือน —</option>
+                  {MONTHS_TH_FULL.map((m, i) => (
+                    <option key={m} value={i + 1}>{m}</option>
+                  ))}
+                </select>
+                <select name="target_year" aria-label="ปีเป้าหมาย" defaultValue={trip?.target_year ?? ""} className={inputCls}>
+                  <option value="">— ปี —</option>
+                  {[...years].sort().map((y) => (
+                    <option key={y} value={y}>{be(y)} ({y})</option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
 
-          <div>
-            <label htmlFor="description" className={labelCls}>รายละเอียด / โน้ต</label>
-            <textarea id="description" name="description" rows={4} maxLength={5000} defaultValue={trip?.description ?? ""} placeholder="แผนคร่าวๆ สิ่งที่ต้องเตรียม ของที่ต้องจอง…" className={inputCls} />
+          <div className="min-w-0 space-y-4">
+            {members.length === 0 ? (
+              <p className="rounded-2xl border border-dashed border-black/10 px-4 py-3 text-sm text-slate-500">
+                ยังไม่มีรายชื่อแก๊ง —{" "}
+                <Link href="/settings" className="font-medium text-sky-700 underline underline-offset-2">
+                  เพิ่มรายชื่อในหน้าตั้งค่า
+                </Link>{" "}
+                แล้วกลับมาเลือกเจ้าของทริปและคนที่ไปได้เลย
+              </p>
+            ) : (
+              <>
+                <fieldset>
+                  <legend className={labelCls}>เจ้าของทริป (Owner)</legend>
+                  <div className="flex flex-wrap gap-1.5">
+                    {members.map((m) => (
+                      <MemberChip key={m.id} member={m} selected={ownerId === m.id} onClick={() => pickOwner(m.id)} />
+                    ))}
+                  </div>
+                </fieldset>
+
+                <fieldset>
+                  <legend className={`${labelCls} flex w-full items-center`}>
+                    ใครไปบ้าง <span className="ml-1 font-normal text-slate-400">({goers.length} คน)</span>
+                    <button
+                      type="button"
+                      onClick={() => setGoers(allGoing ? [] : members.map((m) => m.id))}
+                      className="ml-auto rounded-full px-2 text-xs font-medium text-sky-600 hover:bg-sky-50"
+                    >
+                      {allGoing ? "ล้าง" : "เลือกทุกคน"}
+                    </button>
+                  </legend>
+                  <div className="flex flex-wrap gap-1.5">
+                    {members.map((m) => (
+                      <MemberChip key={m.id} member={m} selected={goers.includes(m.id)} onClick={() => toggleGoer(m.id)} />
+                    ))}
+                  </div>
+                </fieldset>
+              </>
+            )}
+
+            {trip && (
+              <Link
+                href={`/trips/${trip.id}/expenses`}
+                className="flex items-center gap-3 rounded-2xl bg-slate-100/70 px-3.5 py-3 text-sm transition hover:bg-slate-100"
+              >
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[#34c759] text-white">
+                  <BanknoteIcon className="size-5" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block font-medium">ค่าใช้จ่าย / หารบิล</span>
+                  <span className="block text-xs text-slate-500">
+                    {trip.expense_total > 0 ? `รวม ฿${formatBaht(trip.expense_total)} — ดูว่าใครต้องจ่ายเท่าไหร่` : "จดบิลที่จ่ายไป แล้วให้ระบบคิดว่าใครต้องโอนให้ใคร"}
+                  </span>
+                </span>
+                <ChevronRightIcon className="size-4 shrink-0 text-slate-400" />
+              </Link>
+            )}
+
+            <div className="grid gap-4 sm:grid-cols-[10rem_1fr]">
+              <div>
+                <label htmlFor="budget" className={labelCls}>งบประมาณ (บาท/คน)</label>
+                <input id="budget" name="budget" inputMode="numeric" defaultValue={trip?.budget ?? ""} placeholder="เช่น 3500" className={inputCls} />
+              </div>
+              <div>
+                <label htmlFor="link" className={labelCls}>ลิงก์อ้างอิง</label>
+                <input id="link" name="link" type="text" inputMode="url" maxLength={1000} defaultValue={trip?.link ?? ""} placeholder="ที่พัก, รีวิว, Google Maps…" className={inputCls} />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="description" className={labelCls}>รายละเอียด / โน้ต</label>
+              <textarea id="description" name="description" rows={4} maxLength={5000} defaultValue={trip?.description ?? ""} placeholder="แผนคร่าวๆ สิ่งที่ต้องเตรียม ของที่ต้องจอง…" className={inputCls} />
+            </div>
           </div>
         </div>
 
