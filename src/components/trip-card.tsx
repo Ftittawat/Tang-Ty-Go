@@ -11,7 +11,10 @@ import {
   be, categoryOf, daysUntil, formatDateRange, formatTarget, googleCalendarUrl, MONTHS_TH, STATUSES, tripNights, type Trip,
 } from "@/lib/trips";
 
-type Meter = { label: string; value: string; pct: number; over?: boolean; hint: string };
+/** The countdown bar covers the last this-many days before a trip. */
+const COUNTDOWN_DAYS = 90;
+
+type Meter ={ label: string; value: string; pct: number; over?: boolean; hint: string };
 
 /** The one progress line a card shows: trip underway › countdown to departure › budget spent. */
 function meterOf(trip: Trip): Meter | null {
@@ -23,12 +26,12 @@ function meterOf(trip: Trip): Meter | null {
     return { label: "กำลังเที่ยว", value: `วันที่ ${day}/${total}`, pct: day / total, hint: "วันที่ของทริป" };
   }
   if (trip.status !== "done" && start !== null && start > 0) {
-    const waited = Math.max(0, -(daysUntil(trip.created_at.slice(0, 10)) ?? 0));
+    // Same scale on every card: empty from COUNTDOWN_DAYS out, full on departure day.
     return {
       label: "นับถอยหลัง",
       value: `อีก ${start} วัน`,
-      pct: waited / (waited + start),
-      hint: "เวลาที่ผ่านไปตั้งแต่สร้างการ์ดจนถึงวันเดินทาง",
+      pct: Math.max(0, 1 - start / COUNTDOWN_DAYS),
+      hint: `เต็มเมื่อถึงวันเดินทาง — เริ่มเติมเมื่อเหลือไม่เกิน ${COUNTDOWN_DAYS} วัน`,
     };
   }
   if (trip.budget && trip.expense_total > 0) {
