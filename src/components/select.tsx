@@ -1,44 +1,64 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
 import { CheckIcon } from "@/components/icons";
 import { inputCls } from "@/components/ui";
 
 export type SelectOption = { value: string; label: string };
 
+const HIDDEN: CSSProperties = { position: "fixed", visibility: "hidden", top: 0, left: 0 };
+
 /**
- * Dropdown that opens right under the field. Replaces <select> where the native macOS menu
- * (which pops up over the field, hiding the label) looks off. Submits through a hidden input,
- * so it drops into a <form> like a select with `name` + `defaultValue`.
+ * Dropdown that opens right under the field; used instead of <select> everywhere, since the
+ * native macOS menu pops up over the field and hides its label. With `name` it submits through a
+ * hidden input, so it drops into a <form> like a select. Uncontrolled with `defaultValue`, or
+ * controlled with `value` + `onChange`.
  */
 export function Select({
-  id, name, options, defaultValue, onChange, "aria-label": ariaLabel, className = "",
+  id, name, options, defaultValue = "", value: controlled, onChange, disabled = false, title,
+  "aria-label": ariaLabel, className = "", buttonClassName, align = "left",
 }: {
   id?: string;
-  name: string;
+  name?: string;
   options: SelectOption[];
-  defaultValue: string;
+  defaultValue?: string;
+  value?: string;
   onChange?: (value: string) => void;
+  disabled?: boolean;
+  title?: string;
   "aria-label"?: string;
   className?: string;
+  /** Replaces the default full-width field look (e.g. a small pill). */
+  buttonClassName?: string;
+  /** Which edge the list lines up with when it's wider than the button. */
+  align?: "left" | "right";
 }) {
   const listId = useId();
-  const [value, setValue] = useState(defaultValue);
+  const [own, setOwn] = useState(defaultValue);
+  const value = controlled ?? own;
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
+  // Starts fixed + hidden: rendered in the normal flow even once, the list would push the
+  // (vertically centered) dialog around and the button would be measured in the wrong spot.
+  const [place, setPlace] = useState<CSSProperties>(HIDDEN);
   const selectedIdx = Math.max(0, options.findIndex((o) => o.value === value));
 
   const show = () => {
     setActive(selectedIdx);
     setOpen(true);
   };
+  const close = () => {
+    setOpen(false);
+    setPlace(HIDDEN);
+  };
   const pick = (i: number) => {
     const v = options[i]?.value;
     if (v === undefined) return;
-    setValue(v);
-    setOpen(false);
+    setOwn(v);
+    close();
     onChange?.(v);
   };
 
@@ -46,11 +66,46 @@ export function Select({
   useEffect(() => {
     if (!open) return;
     const onDown = (e: PointerEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+      if (rootRef.current?.contains(e.target as Node)) return;
+      setOpen(false);
+      setPlace(HIDDEN);
     };
     document.addEventListener("pointerdown", onDown);
     return () => document.removeEventListener("pointerdown", onDown);
   }, [open]);
+
+  /*
+   * The list is position: fixed, placed from the button, so a scrolling dialog body (or the
+   * dialog's footer) can't clip it. It opens upwards when there's more room above, and follows
+   * the button while anything scrolls.
+   */
+  useLayoutEffect(() => {
+    if (!open) return;
+    const update = () => {
+      const b = buttonRef.current?.getBoundingClientRect();
+      if (!b) return;
+      const gap = 6;
+      const margin = 8;
+      const below = window.innerHeight - b.bottom - gap - margin;
+      const above = b.top - gap - margin;
+      const want = Math.min(256, listRef.current?.scrollHeight ?? 256);
+      const up = below < want && above > below;
+      setPlace({
+        position: "fixed",
+        minWidth: b.width,
+        maxHeight: Math.max(96, Math.min(256, up ? above : below)),
+        ...(up ? { bottom: window.innerHeight - b.top + gap } : { top: b.bottom + gap }),
+        ...(align === "right" ? { right: window.innerWidth - b.right } : { left: b.left }),
+      });
+    };
+    update();
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
+  }, [open, align]);
 
   // Keep the highlighted option in view while arrowing through a long list.
   useEffect(() => {
@@ -84,16 +139,17 @@ export function Select({
       // Only close the list — without this the surrounding <dialog> would close too.
       e.preventDefault();
       e.stopPropagation();
-      setOpen(false);
+      close();
     } else if (e.key === "Tab") {
-      setOpen(false);
+      close();
     }
   };
 
   return (
     <div ref={rootRef} className={`relative ${className}`}>
-      <input type="hidden" name={name} value={value} />
+      {name && <input type="hidden" name={name} value={value} />}
       <button
+        ref={buttonRef}
         id={id}
         type="button"
         role="combobox"
@@ -102,12 +158,22 @@ export function Select({
         aria-controls={listId}
         aria-activedescendant={open ? `${listId}-${active}` : undefined}
         aria-label={ariaLabel}
-        onClick={() => (open ? setOpen(false) : show())}
+        title={title}
+        disabled={disabled}
+        onClick={() => (open ? close() : show())}
         onKeyDown={onKeyDown}
-        className={`${inputCls} flex items-center gap-2 text-left ${open ? "border-sky-500 ring-4 ring-sky-500/15" : ""}`}
+        className={
+          buttonClassName
+            ? `flex items-center gap-1 text-left disabled:opacity-60 ${buttonClassName}`
+            : `${inputCls} flex items-center gap-2 text-left ${open ? "border-sky-500 ring-4 ring-sky-500/15" : ""}`
+        }
       >
         <span className="min-w-0 flex-1 truncate">{options[selectedIdx]?.label}</span>
-        <svg viewBox="0 0 20 20" aria-hidden className={`size-[1.1rem] shrink-0 text-[#86868b] transition-transform ${open ? "rotate-180" : ""}`}>
+        <svg
+          viewBox="0 0 20 20"
+          aria-hidden
+          className={`shrink-0 transition-transform ${buttonClassName ? "size-3.5 opacity-70" : "size-[1.1rem] text-[#86868b]"} ${open ? "rotate-180" : ""}`}
+        >
           <path d="m6 8 4 4 4-4" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </button>
@@ -117,7 +183,8 @@ export function Select({
           id={listId}
           role="listbox"
           aria-labelledby={id}
-          className="absolute inset-x-0 top-full z-30 mt-1.5 max-h-64 overflow-y-auto rounded-2xl bg-white p-1 text-sm shadow-lift ring-1 ring-black/[0.06]"
+          style={place}
+          className="z-50 w-max max-w-[min(20rem,calc(100vw-2rem))] overflow-y-auto rounded-2xl bg-white p-1 text-sm shadow-lift ring-1 ring-black/[0.06]"
         >
           {options.map((o, i) => {
             const selected = i === selectedIdx;

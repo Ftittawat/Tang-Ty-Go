@@ -1,5 +1,6 @@
 "use client";
 
+import { Select } from "@/components/select";
 import { startTransition, useActionState, useEffect, useRef, useState, useTransition, type FormEvent } from "react";
 import { removeTrip, saveTrip } from "@/app/actions";
 import { openPlanForTrip } from "@/app/plan-actions";
@@ -148,11 +149,12 @@ export function TripDialog({
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label htmlFor="category" className={labelCls}>ประเภท</label>
-                <select id="category" name="category" defaultValue={trip?.category ?? "trip"} className={inputCls}>
-                  {CATEGORIES.map((c) => (
-                    <option key={c.id} value={c.id}>{c.emoji} {c.label}</option>
-                  ))}
-                </select>
+                <Select
+                  id="category"
+                  name="category"
+                  defaultValue={trip?.category ?? "trip"}
+                  options={CATEGORIES.map((c) => ({ value: c.id, label: `${c.emoji} ${c.label}` }))}
+                />
               </div>
               <div>
                 <label htmlFor="location" className={labelCls}>สถานที่</label>
@@ -174,18 +176,18 @@ export function TripDialog({
               </div>
               <p className="mb-2 mt-3 text-xs font-medium text-slate-600">เป้าหมายคร่าวๆ <span className="font-normal text-slate-400">(ถ้ายังไม่ล็อกวัน)</span></p>
               <div className="grid grid-cols-2 gap-3">
-                <select name="target_month" aria-label="เดือนเป้าหมาย" defaultValue={trip?.target_month ?? ""} className={inputCls}>
-                  <option value="">— เดือน —</option>
-                  {MONTHS_TH_FULL.map((m, i) => (
-                    <option key={m} value={i + 1}>{m}</option>
-                  ))}
-                </select>
-                <select name="target_year" aria-label="ปีเป้าหมาย" defaultValue={trip?.target_year ?? ""} className={inputCls}>
-                  <option value="">— ปี —</option>
-                  {[...years].sort().map((y) => (
-                    <option key={y} value={y}>{be(y)} ({y})</option>
-                  ))}
-                </select>
+                <Select
+                  name="target_month"
+                  aria-label="เดือนเป้าหมาย"
+                  defaultValue={String(trip?.target_month ?? "")}
+                  options={[{ value: "", label: "— เดือน —" }, ...MONTHS_TH_FULL.map((m, i) => ({ value: String(i + 1), label: m }))]}
+                />
+                <Select
+                  name="target_year"
+                  aria-label="ปีเป้าหมาย"
+                  defaultValue={String(trip?.target_year ?? "")}
+                  options={[{ value: "", label: "— ปี —" }, ...[...years].sort().map((y) => ({ value: String(y), label: `${be(y)} (${y})` }))]}
+                />
               </div>
             </div>
           </div>
