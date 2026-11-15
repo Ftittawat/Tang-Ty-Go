@@ -1,15 +1,35 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { logout } from "@/app/actions";
 import { AppHeader, PageTitle } from "@/components/app-nav";
-import { LogoutIcon, PeopleIcon } from "@/components/icons";
+import { BoardCode, BoardNameForm, NicknameForm } from "@/components/board-settings";
+import { BoardIcon, ChevronRightIcon, LogoutIcon, PeopleIcon } from "@/components/icons";
+import { SwitchBoardButton } from "@/components/join-forms";
 import { MembersManager } from "@/components/members-manager";
-import { ghostBtn, pageCls, surfaceCls } from "@/components/ui";
+import { Avatar, ghostBtn, pageCls, pillCls, surfaceCls } from "@/components/ui";
 import { listMembers, memberUsage } from "@/lib/db";
+import { boardPage } from "@/lib/viewer";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "ตั้งค่า · Tang-Ty Go" };
 
-export default function SettingsPage() {
+function SectionTitle({ icon, title, subtitle, tint }: { icon: React.ReactNode; title: string; subtitle?: string; tint: string }) {
+  return (
+    <div className="mb-4 flex items-center gap-3">
+      <span className={`flex size-10 shrink-0 items-center justify-center rounded-xl text-white ${tint}`}>{icon}</span>
+      <div>
+        <h2 className="font-semibold">{title}</h2>
+        {subtitle && <p className="text-sm text-slate-500">{subtitle}</p>}
+      </div>
+    </div>
+  );
+}
+
+export default async function SettingsPage() {
+  const { viewer, board, me, boards } = await boardPage();
+  const isAdmin = me.role === "admin";
+  const others = boards.filter((b) => b.id !== board.id);
+
   return (
     <div className="min-h-screen">
       <AppHeader settings={false}>
@@ -21,17 +41,64 @@ export default function SettingsPage() {
       <main className={`${pageCls} py-6`}>
         <div className="mx-auto max-w-2xl space-y-6">
           <PageTitle title="ตั้งค่า" />
-          <section className={`${surfaceCls} p-5 sm:p-6`}>
-            <div className="mb-4 flex items-center gap-3">
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-sky-600 text-white">
-                <PeopleIcon className="size-5" />
-              </span>
-              <div>
-                <h2 className="font-semibold">รายชื่อแก๊ง</h2>
-                <p className="text-sm text-slate-500">แท็ก “ทั่วไป” ใช้เลือกคนในทริป / หารบิล — แท็ก “แบดมินตัน” ใช้ลงชื่อตีแบด</p>
+
+          <section className={`${surfaceCls} space-y-5 p-5 sm:p-6`}>
+            <div className="flex items-center gap-3">
+              {viewer.image ? (
+                // Google profile photo; plain <img> since it's a tiny avatar from googleusercontent.com.
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={viewer.image} alt="" referrerPolicy="no-referrer" className="size-11 shrink-0 rounded-full" />
+              ) : (
+                <Avatar name={me.name} className="size-11" />
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-semibold">{me.name}</p>
+                <p className="truncate text-sm text-slate-500">{viewer.email}</p>
               </div>
+              <span className={`${pillCls} ${isAdmin ? "bg-[#ff9500]/12 text-[#c93400]" : "bg-black/[0.05] text-slate-500"}`}>
+                {isAdmin ? "แอดมิน" : "สมาชิก"}
+              </span>
             </div>
-            <MembersManager members={listMembers()} usage={memberUsage()} />
+            <NicknameForm key={me.name} memberId={me.id} name={me.name} />
+          </section>
+
+          <section className={`${surfaceCls} p-5 sm:p-6`}>
+            <SectionTitle
+              icon={<BoardIcon className="size-5" />}
+              tint="bg-[#34c759]"
+              title={board.name}
+              subtitle={isAdmin ? "คุณเป็นแอดมินของบอร์ดนี้" : "บอร์ดที่เปิดอยู่"}
+            />
+            {isAdmin && (
+              <div className="space-y-5">
+                <BoardNameForm key={board.name} name={board.name} />
+                <BoardCode code={board.code} />
+              </div>
+            )}
+            <div className={`flex flex-wrap items-center gap-2 ${isAdmin ? "mt-5 border-t border-black/[0.06] pt-5" : ""}`}>
+              {others.map((b) => (
+                <SwitchBoardButton key={b.id} id={b.id}>
+                  สลับไป “{b.name}” <ChevronRightIcon className="size-4" />
+                </SwitchBoardButton>
+              ))}
+              <Link href="/join" className={ghostBtn}>
+                {viewer.isSystemAdmin ? "เข้าร่วม / สร้างบอร์ดอื่น" : "เข้าร่วมบอร์ดอื่น"}
+              </Link>
+            </div>
+          </section>
+
+          <section className={`${surfaceCls} p-5 sm:p-6`}>
+            <SectionTitle
+              icon={<PeopleIcon className="size-5" />}
+              tint="bg-sky-600"
+              title="รายชื่อแก๊ง"
+              subtitle={
+                isAdmin
+                  ? "เพื่อนที่เข้าร่วมด้วยรหัสจะขึ้นที่นี่เอง — เพิ่มชื่อเองได้สำหรับคนที่ไม่ได้ใช้แอป"
+                  : "เฉพาะแอดมินที่เพิ่ม / แก้ไขรายชื่อคนอื่นได้"
+              }
+            />
+            <MembersManager members={listMembers(board.id)} usage={memberUsage(board.id)} isAdmin={isAdmin} meId={me.id} />
           </section>
         </div>
       </main>

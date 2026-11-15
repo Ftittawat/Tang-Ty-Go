@@ -12,7 +12,11 @@ pipeline {
     environment {
         IMAGE_NAME = 'tangty-go'
         // Jenkins > Credentials > Secret text (prefixed so it can't clash with other projects).
-        APP_PASSWORD = credentials('TANGTY_GO_APP_PASSWORD')
+        BETTER_AUTH_SECRET   = credentials('TANGTY_GO_BETTER_AUTH_SECRET')
+        BETTER_AUTH_URL      = credentials('TANGTY_GO_BETTER_AUTH_URL')
+        GOOGLE_CLIENT_ID     = credentials('TANGTY_GO_GOOGLE_CLIENT_ID')
+        GOOGLE_CLIENT_SECRET = credentials('TANGTY_GO_GOOGLE_CLIENT_SECRET')
+        ADMIN_EMAILS         = credentials('TANGTY_GO_ADMIN_EMAILS')
     }
 
     stages {
