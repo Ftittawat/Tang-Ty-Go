@@ -55,7 +55,7 @@ export default async function SettingsPage() {
                 <p className="truncate font-semibold">{me.name}</p>
                 <p className="truncate text-sm text-slate-500">{viewer.email}</p>
               </div>
-              <span className={`${pillCls} ${isAdmin ? "bg-[#ff9500]/12 text-[#c93400]" : "bg-black/[0.05] text-slate-500"}`}>
+              <span className={`${pillCls} ${isAdmin ? "bg-[#ff9500]/12 text-[#c93400]" : "bg-black/5 text-slate-500"}`}>
                 {isAdmin ? "แอดมิน" : "สมาชิก"}
               </span>
             </div>
@@ -75,7 +75,7 @@ export default async function SettingsPage() {
                 <BoardCode code={board.code} />
               </div>
             )}
-            <div className={`flex flex-wrap items-center gap-2 ${isAdmin ? "mt-5 border-t border-black/[0.06] pt-5" : ""}`}>
+            <div className={`flex flex-wrap items-center gap-2 ${isAdmin ? "mt-5 border-t border-black/6 pt-5" : ""}`}>
               {others.map((b) => (
                 <SwitchBoardButton key={b.id} id={b.id}>
                   สลับไป “{b.name}” <ChevronRightIcon className="size-4" />
@@ -84,6 +84,11 @@ export default async function SettingsPage() {
               <Link href="/join" className={ghostBtn}>
                 {viewer.isSystemAdmin ? "เข้าร่วม / สร้างบอร์ดอื่น" : "เข้าร่วมบอร์ดอื่น"}
               </Link>
+              {viewer.isSystemAdmin && (
+                <Link href="/admin/boards" className={ghostBtn}>
+                  บอร์ดทั้งหมด
+                </Link>
+              )}
             </div>
           </section>
 
