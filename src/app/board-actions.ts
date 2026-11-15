@@ -103,3 +103,15 @@ export async function resetBoardCode() {
   store.resetBoardCode(board.id);
   revalidatePath("/settings");
 }
+
+/** System admins only. The board's name must be typed back, since this can't be undone. */
+export async function deleteBoard(id: number, typedName: string): Promise<string | null> {
+  const viewer = await requireAuth();
+  if (!viewer.isSystemAdmin) return "เฉพาะแอดมินระบบที่ลบบอร์ดได้";
+  const board = store.getBoard(id);
+  if (!board) return "ไม่พบบอร์ดนี้ — อาจถูกลบไปแล้ว";
+  if (cleanName(typedName) !== board.name) return "ชื่อบอร์ดไม่ตรง — พิมพ์ให้ตรงทุกตัวอักษร";
+  store.deleteBoard(id);
+  revalidatePath("/", "layout");
+  return null;
+}

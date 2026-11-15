@@ -47,6 +47,13 @@ export const CalendarIcon = (p: IconProps) => (
   </Icon>
 );
 
+export const CalendarPlusIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <rect x="3.5" y="5" width="17" height="15.5" rx="3" />
+    <path d="M3.5 10h17M8 3v4M16 3v4M12 13v5M9.5 15.5h5" />
+  </Icon>
+);
+
 export const MapPinIcon = (p: IconProps) => (
   <Icon {...p}>
     <path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11Z" />

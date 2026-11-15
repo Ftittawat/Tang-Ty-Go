@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { requireBoard } from "@/lib/viewer";
 import { getTrip } from "@/lib/db";
 import * as store from "@/lib/plan-store";
-import { isTime, isTravelMode, MAX_DAYS, MAX_DURATION_MIN, type PlanItemKind } from "@/lib/plans";
+import { isActivityType, isTime, isTravelMode, MAX_DAYS, MAX_DURATION_MIN, type PlanItemKind } from "@/lib/plans";
 import { tripNights } from "@/lib/trips";
 
 export type PlanFormState = { ok: boolean; error?: string; at?: number } | null;
@@ -128,6 +128,9 @@ export async function saveItem(_prev: PlanFormState, form: FormData): Promise<Pl
   const mode = String(form.get("travel_mode") ?? "");
   const travel_mode = kind === "travel" ? (isTravelMode(mode) ? mode : "car") : null;
 
+  const type = String(form.get("activity_type") ?? "");
+  const activity_type = kind === "activity" && isActivityType(type) ? type : null;
+
   const input: store.ItemInput = {
     day,
     kind,
@@ -137,6 +140,7 @@ export async function saveItem(_prev: PlanFormState, form: FormData): Promise<Pl
     start_time,
     duration_min,
     travel_mode,
+    activity_type,
   };
 
   const id = Number(form.get("id"));

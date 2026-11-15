@@ -10,7 +10,7 @@ import { PlanForm } from "@/components/plan-form";
 import { PlanItemForm, type ItemDraft } from "@/components/plan-item-form";
 import { dangerBtn, ghostBtn, pageCls, surfaceCls } from "@/components/ui";
 import {
-  dayDateLabel, dayOffset, daySummary, formatDuration, formatTime, mapsUrl, scheduleDay, travelModeOf,
+  activityTypeOf, dayDateLabel, dayOffset, daySummary, formatDuration, formatTime, mapsUrl, scheduleDay, travelModeOf,
   type Plan, type PlanItem, type ScheduledItem,
 } from "@/lib/plans";
 import { categoryOf, formatDateRange, type Trip } from "@/lib/trips";
@@ -70,6 +70,7 @@ function ActivityRow({
   onEdit: () => void;
 }) {
   const { item } = s;
+  const type = activityTypeOf(item.activity_type);
   return (
     <li className="group flex gap-2 sm:gap-3">
       <div className="w-11 shrink-0 pt-3 text-right leading-tight sm:w-14">
@@ -84,6 +85,11 @@ function ActivityRow({
         <ItemActions item={item} isFirst={isFirst} isLast={isLast} onEdit={onEdit} />
         <div className="min-w-0 basis-full sm:flex-1 sm:basis-0 sm:-order-1">
           <button type="button" onClick={onEdit} className="w-full text-left">
+            {type && (
+              <span className={`mb-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${type.tint}`}>
+                {type.emoji} {type.label}
+              </span>
+            )}
             <h3 className="font-semibold leading-normal break-words">{item.title}</h3>
           </button>
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">

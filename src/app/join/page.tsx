@@ -45,6 +45,9 @@ export default async function JoinPage() {
       {viewer.isSystemAdmin && (
         <div className="space-y-4 border-t border-black/6 pt-5">
           <CreateBoardForm />
+          <Link href="/admin/boards" className="block text-center text-sm font-medium text-sky-600 hover:underline">
+            จัดการบอร์ดทั้งหมด (ลบบอร์ด) →
+          </Link>
           {others.length > 0 && (
             <div>
               <p className="mb-1.5 text-xs font-medium text-slate-600">บอร์ดอื่นในระบบ (Admin only)</p>

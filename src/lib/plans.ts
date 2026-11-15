@@ -25,7 +25,26 @@ export type PlanItem = {
   start_time: string | null; // "HH:MM" — null = starts when the previous item ends
   duration_min: number | null;
   travel_mode: TravelMode | null;
+  activity_type: ActivityType | null; // activities only; null = not set
 };
+
+/** What kind of stop an activity is. `tint` is a soft pill (bg + text) shown on the activity card. */
+export const ACTIVITY_TYPES = [
+  { id: "eat", label: "กิน", emoji: "🍜", tint: "bg-[#ff9500]/12 text-[#c93400]" },
+  { id: "cafe", label: "คาเฟ่", emoji: "☕", tint: "bg-[#a2845e]/15 text-[#7f6545]" },
+  { id: "sightseeing", label: "เที่ยวชม", emoji: "📸", tint: "bg-[#007aff]/10 text-[#0066d6]" },
+  { id: "culture", label: "วัด / วัฒนธรรม", emoji: "🏛️", tint: "bg-[#af52de]/12 text-[#8944ab]" },
+  { id: "adventure", label: "แอดเวนเจอร์", emoji: "🧗", tint: "bg-[#34c759]/12 text-[#248a3d]" },
+  { id: "shopping", label: "ช้อปปิ้ง", emoji: "🛍️", tint: "bg-[#ff2d55]/10 text-[#d30f45]" },
+  { id: "stay", label: "ที่พัก", emoji: "🏨", tint: "bg-[#5856d6]/12 text-[#3634a3]" },
+  { id: "relax", label: "พักผ่อน", emoji: "🛋️", tint: "bg-[#30b0c7]/12 text-[#0e7f93]" },
+  { id: "nightlife", label: "ไนต์ไลฟ์", emoji: "🌙", tint: "bg-[#1c1c1e]/8 text-[#3a3a3c]" },
+  { id: "other", label: "อื่น ๆ", emoji: "📌", tint: "bg-black/[0.05] text-slate-600" },
+] as const;
+
+export type ActivityType = (typeof ACTIVITY_TYPES)[number]["id"];
+export const isActivityType = (v: unknown): v is ActivityType => ACTIVITY_TYPES.some((t) => t.id === v);
+export const activityTypeOf = (id: string | null) => ACTIVITY_TYPES.find((t) => t.id === id) ?? null;
 
 export const TRAVEL_MODES = [
   { id: "car", label: "รถยนต์", emoji: "🚗" },

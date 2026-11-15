@@ -84,7 +84,8 @@ export function db(): Database.Database {
       location     TEXT,
       start_time   TEXT,
       duration_min INTEGER,
-      travel_mode  TEXT
+      travel_mode  TEXT,
+      activity_type TEXT
     );
     CREATE INDEX IF NOT EXISTS plan_items_plan ON plan_items(plan_id, day, position);
     CREATE TABLE IF NOT EXISTS expenses (
@@ -111,6 +112,10 @@ export function db(): Database.Database {
   migrateFreeTextPeople(d);
   dropBadminton(d);
   migrateBoards(d);
+  // v4: activities get a type (กิน / คาเฟ่ / เที่ยวชม …); existing ones stay unset.
+  if (!(d.prepare("PRAGMA table_info(plan_items)").all() as { name: string }[]).some((c) => c.name === "activity_type")) {
+    d.exec("ALTER TABLE plan_items ADD COLUMN activity_type TEXT");
+  }
   d.exec(`
     CREATE INDEX IF NOT EXISTS trips_board ON trips(board_id);
     CREATE INDEX IF NOT EXISTS plans_board ON plans(board_id);
@@ -258,18 +263,35 @@ export function boardsForUser(userId: string): MyBoard[] {
   return rows.map((r) => ({ ...r, role: isRole(r.role) ? r.role : "member" }));
 }
 
-export type BoardSummary = Board & { member_count: number; trip_count: number };
+export type BoardSummary = Board & {
+  created_at: string;
+  member_count: number;
+  /** Names someone signed in as (the rest are names an admin typed in). */
+  joined_count: number;
+  trip_count: number;
+  plan_count: number;
+};
 
 /** Every board (system admins only). */
 export function listAllBoards(): BoardSummary[] {
   return db()
     .prepare(`
-      SELECT b.id, b.name, b.code,
+      SELECT b.id, b.name, b.code, b.created_at,
         (SELECT COUNT(*) FROM members WHERE board_id = b.id) AS member_count,
-        (SELECT COUNT(*) FROM trips WHERE board_id = b.id) AS trip_count
+        (SELECT COUNT(*) FROM members WHERE board_id = b.id AND user_id IS NOT NULL) AS joined_count,
+        (SELECT COUNT(*) FROM trips WHERE board_id = b.id) AS trip_count,
+        (SELECT COUNT(*) FROM plans WHERE board_id = b.id) AS plan_count
       FROM boards b ORDER BY b.created_at, b.id
     `)
     .all() as BoardSummary[];
+}
+
+/**
+ * Deletes a board and everything on it: members, trips (with their bills) and plans (with their
+ * items) all go through ON DELETE CASCADE. Google accounts are untouched.
+ */
+export function deleteBoard(id: number) {
+  return db().prepare("DELETE FROM boards WHERE id = ?").run(id).changes > 0;
 }
 
 /**

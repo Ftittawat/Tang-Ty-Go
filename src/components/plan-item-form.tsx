@@ -3,10 +3,11 @@
 import { startTransition, useActionState, useEffect, useState, type FormEvent } from "react";
 import { saveItem } from "@/app/plan-actions";
 import { useModalClose } from "@/components/modal";
+import { Select } from "@/components/select";
 import { ghostBtn, inputCls, labelCls, primaryBtn } from "@/components/ui";
 import {
-  dayDateLabel, formatDuration, formatTime, parseTime, TRAVEL_MODES,
-  type PlanItem, type PlanItemKind, type TravelMode,
+  ACTIVITY_TYPES, dayDateLabel, formatDuration, formatTime, parseTime, TRAVEL_MODES,
+  type ActivityType, type PlanItem, type PlanItemKind, type TravelMode,
 } from "@/lib/plans";
 
 export type ItemDraft = {
@@ -39,6 +40,7 @@ export function PlanItemForm({
   const [dur, setDur] = useState(splitDuration(initialDur));
   const [end, setEnd] = useState(initialStart !== null && initialDur !== null ? formatTime(initialStart + initialDur) : "");
   const [mode, setMode] = useState<TravelMode>(item?.travel_mode ?? "car");
+  const [activityType, setActivityType] = useState<ActivityType | null>(item?.activity_type ?? null);
 
   useEffect(() => {
     if (state?.ok) close();
@@ -82,6 +84,7 @@ export function PlanItemForm({
       {draft.beforeId && <input type="hidden" name="before_id" value={draft.beforeId} />}
       <input type="hidden" name="duration_min" value={durMin ?? ""} />
       {isTravel && <input type="hidden" name="travel_mode" value={mode} />}
+      {!isTravel && <input type="hidden" name="activity_type" value={activityType ?? ""} />}
       {(isTravel || dayCount === 1) && <input type="hidden" name="day" value={draft.day} />}
 
       <div className="space-y-4 overflow-y-auto px-5 py-4">
@@ -115,16 +118,44 @@ export function PlanItemForm({
           </div>
         )}
 
+        {!isTravel && (
+          <fieldset>
+            <legend className={labelCls}>
+              ประเภท <span className="font-normal text-slate-400">(ไม่บังคับ — แตะอีกครั้งเพื่อเอาออก)</span>
+            </legend>
+            <div className="flex flex-wrap gap-1.5">
+              {ACTIVITY_TYPES.map((t) => {
+                const on = activityType === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setActivityType(on ? null : t.id)}
+                    aria-pressed={on}
+                    className={`rounded-full px-3 py-1 text-sm ring-1 transition ${
+                      on ? "bg-sky-600/10 font-medium text-sky-700 ring-sky-600/60" : "text-slate-600 ring-black/[0.08] hover:bg-slate-50"
+                    }`}
+                  >
+                    {t.emoji} {t.label}
+                  </button>
+                );
+              })}
+            </div>
+          </fieldset>
+        )}
+
         {!isTravel && dayCount > 1 && (
           <div>
             <label htmlFor="item-day" className={labelCls}>วัน</label>
-            <select id="item-day" name="day" defaultValue={draft.day} className={inputCls}>
-              {Array.from({ length: dayCount }, (_, i) => i + 1).map((d) => (
-                <option key={d} value={d}>
-                  วันที่ {d}{dayDateLabel(startDate, d) ? ` · ${dayDateLabel(startDate, d)}` : ""}
-                </option>
-              ))}
-            </select>
+            <Select
+              id="item-day"
+              name="day"
+              defaultValue={String(draft.day)}
+              options={Array.from({ length: dayCount }, (_, i) => i + 1).map((d) => ({
+                value: String(d),
+                label: `วันที่ ${d}${dayDateLabel(startDate, d) ? ` · ${dayDateLabel(startDate, d)}` : ""}`,
+              }))}
+            />
           </div>
         )}
 
