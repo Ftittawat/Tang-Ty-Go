@@ -165,12 +165,14 @@ function addDaysISO(iso: string, n: number) {
 /**
  * "Add to Google Calendar" link for a trip with a real start date: opens the user's own Google
  * Calendar with an all-day event pre-filled (nothing is saved until they press Save there).
- * Google's end date is exclusive, hence the +1 day.
+ * Google's end date is exclusive, hence the +1 day. `appOrigin` (e.g. "https://tangty.example")
+ * adds a link back to the trip's card on the board as the last line of the details.
  */
-export function googleCalendarUrl(t: Trip) {
+export function googleCalendarUrl(t: Trip, appOrigin?: string) {
   if (!t.start_date) return null;
   const end = addDaysISO(t.end_date ?? t.start_date, 1);
-  const details = [t.description, t.link].filter(Boolean).join("\n\n");
+  const back = appOrigin ? `ดูทริปนี้ใน Tang-Ty Go: ${appOrigin}/?trip=${t.id}` : null;
+  const details = [t.description, t.link, back].filter(Boolean).join("\n\n");
   const params = new URLSearchParams({ action: "TEMPLATE", text: t.title, dates: `${ymd(t.start_date)}/${ymd(end)}` });
   if (details) params.set("details", details);
   if (t.location) params.set("location", t.location);

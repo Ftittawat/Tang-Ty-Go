@@ -9,8 +9,8 @@ export async function proxy(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const url = new URL("/login", request.url);
-  // Come back here after Google (e.g. an invite link /join/K7QM-3XPA).
-  if (pathname !== "/") url.searchParams.set("next", pathname + search);
+  // Come back here after Google (e.g. an invite link /join/K7QM-3XPA, or /?trip=12 from a calendar event).
+  if (pathname !== "/" || search) url.searchParams.set("next", pathname + search);
   return NextResponse.redirect(url);
 }
 

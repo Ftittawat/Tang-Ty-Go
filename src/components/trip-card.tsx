@@ -166,6 +166,10 @@ export function TripCard({ trip, names, onOpen, past = false }: { trip: Trip; na
             {calendarUrl && (
               <a
                 href={calendarUrl}
+                // The site's own address is only known in the browser, so the link back to this
+                // trip is added to the event details right before the link is followed.
+                onPointerDown={(e) => (e.currentTarget.href = googleCalendarUrl(trip, window.location.origin) ?? calendarUrl)}
+                onFocus={(e) => (e.currentTarget.href = googleCalendarUrl(trip, window.location.origin) ?? calendarUrl)}
                 target="_blank"
                 rel="noreferrer"
                 title="เพิ่มลงใน Google Calendar ของคุณ"
