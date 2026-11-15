@@ -39,7 +39,7 @@ export function PlanList({ plans, trips }: { plans: PlanSummary[]; trips: Trip[]
             <button onClick={() => setCreating(true)} className={`${primaryBtn} mt-5`}><PlusIcon className="size-4" />สร้างแผน</button>
           </div>
         ) : (
-          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <ul className="grid gap-3 md:grid-cols-2">
             {plans.map((p) => {
               const trip = p.trip_id ? tripById.get(p.trip_id) : undefined;
               const first = dayDateLabel(p.start_date, 1);

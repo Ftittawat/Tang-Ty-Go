@@ -186,7 +186,7 @@ export function PlanEditor({
       <AppHeader />
 
       <main className={`${pageCls} py-5`}>
-        <div className="mx-auto max-w-3xl">
+        <div>
           <PageTitle
             back={{ href: "/plans", label: "แผนทั้งหมด" }}
             title={plan.title}

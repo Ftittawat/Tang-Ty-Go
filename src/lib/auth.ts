@@ -1,40 +1,43 @@
-import crypto from "node:crypto";
-import { cookies } from "next/headers";
+import { betterAuth, type BetterAuthOptions } from "better-auth";
+import { getMigrations } from "better-auth/db/migration";
+import { nextCookies } from "better-auth/next-js";
+import { db } from "@/lib/db";
 
-export const SESSION_COOKIE = "tg_session";
-const MAX_AGE = 30 * 24 * 3600; // seconds
-
-function secret() {
-  const s = process.env.AUTH_SECRET || process.env.APP_PASSWORD;
-  if (!s) throw new Error("APP_PASSWORD is not set");
-  return s;
+/** Google accounts that may create boards and see every board (comma-separated in ADMIN_EMAILS). */
+export function isSystemAdmin(email: string | null | undefined) {
+  if (!email) return false;
+  const admins = (process.env.ADMIN_EMAILS ?? "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
+  return admins.includes(email.toLowerCase());
 }
 
-const sign = (payload: string) => crypto.createHmac("sha256", secret()).update(payload).digest("base64url");
+const options = () =>
+  ({
+    database: db(),
+    socialProviders: {
+      google: {
+        clientId: process.env.GOOGLE_CLIENT_ID ?? "",
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+        prompt: "select_account",
+      },
+    },
+    session: { expiresIn: 30 * 24 * 3600, updateAge: 24 * 3600 },
+    plugins: [nextCookies()],
+  }) satisfies BetterAuthOptions;
 
-export function createSessionValue() {
-  const exp = String(Math.floor(Date.now() / 1000) + MAX_AGE);
-  return { value: `${exp}.${sign(exp)}`, maxAge: MAX_AGE };
+let instance: ReturnType<typeof betterAuth<ReturnType<typeof options>>> | undefined;
+
+/** Created on first use, not at import, so `next build` doesn't open the database. */
+export function getAuth() {
+  return (instance ??= betterAuth(options()));
 }
 
-export function isValidSession(value: string | undefined) {
-  if (!value || !process.env.APP_PASSWORD) return false;
-  const [exp, sig] = value.split(".");
-  if (!exp || !sig || Number(exp) * 1000 < Date.now()) return false;
-  const a = Buffer.from(sig);
-  const b = Buffer.from(sign(exp));
-  return a.length === b.length && crypto.timingSafeEqual(a, b);
+/** Creates / updates Better Auth's tables (user, session, account, verification). Run at server start. */
+export async function migrateAuth() {
+  const { runMigrations } = await getMigrations(options());
+  await runMigrations();
 }
 
-export function checkPassword(input: string) {
-  const expected = process.env.APP_PASSWORD;
-  if (!expected) return false;
-  const a = crypto.createHash("sha256").update(input).digest();
-  const b = crypto.createHash("sha256").update(expected).digest();
-  return crypto.timingSafeEqual(a, b);
-}
-
-/** Call at the top of every Server Action: actions are public endpoints. */
-export async function requireAuth() {
-  if (!isValidSession((await cookies()).get(SESSION_COOKIE)?.value)) throw new Error("Unauthorized");
+/** Any signed-in Google user (which boards they can see is decided per page / action). */
+export async function sessionFromHeaders(headers: Headers) {
+  return getAuth().api.getSession({ headers });
 }

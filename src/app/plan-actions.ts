@@ -2,8 +2,8 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { requireAuth } from "@/lib/auth";
-import { listTrips } from "@/lib/db";
+import { requireBoard } from "@/lib/viewer";
+import { getTrip } from "@/lib/db";
 import * as store from "@/lib/plan-store";
 import { isTime, isTravelMode, MAX_DAYS, MAX_DURATION_MIN, type PlanItemKind } from "@/lib/plans";
 import { tripNights } from "@/lib/trips";
@@ -32,12 +32,12 @@ function revalidatePlans(id?: number) {
 
 // ---------- plans ----------
 
-function parsePlan(form: FormData): store.PlanInput | string {
+function parsePlan(form: FormData, boardId: number): store.PlanInput | string {
   const title = text(form, "title", 120);
   if (!title) return "กรุณาใส่ชื่อแผน";
 
   const trip_id = int(form, "trip_id");
-  if (trip_id !== null && !listTrips().some((t) => t.id === trip_id)) return "ไม่พบทริปที่เลือก — ลองรีเฟรชหน้า";
+  if (trip_id !== null && !getTrip(trip_id, boardId)) return "ไม่พบทริปที่เลือก — ลองรีเฟรชหน้า";
 
   const start_date = text(form, "start_date", 10);
   if (start_date && !DATE_RE.test(start_date)) return "รูปแบบวันที่ไม่ถูกต้อง";
@@ -49,23 +49,23 @@ function parsePlan(form: FormData): store.PlanInput | string {
 }
 
 export async function createPlan(_prev: PlanFormState, form: FormData): Promise<PlanFormState> {
-  await requireAuth();
-  const input = parsePlan(form);
+  const { board } = await requireBoard();
+  const input = parsePlan(form, board.id);
   if (typeof input === "string") return { ok: false, error: input };
-  const id = store.createPlan(input);
+  const id = store.createPlan(board.id, input);
   revalidatePlans();
   redirect(`/plans/${id}`);
 }
 
 /** Open the trip's plan, creating one from the trip's dates the first time. */
 export async function openPlanForTrip(tripId: number) {
-  await requireAuth();
+  const { board } = await requireBoard();
+  const trip = getTrip(tripId, board.id);
+  if (!trip) throw new Error("Trip not found");
   const existing = store.firstPlanForTrip(tripId);
   if (existing) redirect(`/plans/${existing.id}`);
 
-  const trip = listTrips().find((t) => t.id === tripId);
-  if (!trip) throw new Error("Trip not found");
-  const id = store.createPlan({
+  const id = store.createPlan(board.id, {
     title: trip.title,
     trip_id: trip.id,
     start_date: trip.start_date,
@@ -77,10 +77,10 @@ export async function openPlanForTrip(tripId: number) {
 }
 
 export async function updatePlan(_prev: PlanFormState, form: FormData): Promise<PlanFormState> {
-  await requireAuth();
+  const { board } = await requireBoard();
   const id = Number(form.get("id"));
-  if (!store.getPlan(id)) return { ok: false, error: "ไม่พบแผนนี้แล้ว" };
-  const input = parsePlan(form);
+  if (!store.getPlan(id, board.id)) return { ok: false, error: "ไม่พบแผนนี้แล้ว" };
+  const input = parsePlan(form, board.id);
   if (typeof input === "string") return { ok: false, error: input };
 
   const used = store.lastUsedDay(id);
@@ -93,8 +93,8 @@ export async function updatePlan(_prev: PlanFormState, form: FormData): Promise<
 }
 
 export async function deletePlan(id: number) {
-  await requireAuth();
-  store.deletePlan(id);
+  const { board } = await requireBoard();
+  if (store.getPlan(id, board.id)) store.deletePlan(id);
   revalidatePlans();
   redirect("/plans");
 }
@@ -102,9 +102,9 @@ export async function deletePlan(id: number) {
 // ---------- items ----------
 
 export async function saveItem(_prev: PlanFormState, form: FormData): Promise<PlanFormState> {
-  await requireAuth();
+  const { board } = await requireBoard();
   const planId = Number(form.get("plan_id"));
-  const plan = store.getPlan(planId);
+  const plan = store.getPlan(planId, board.id);
   if (!plan) return { ok: false, error: "ไม่พบแผนนี้แล้ว" };
 
   const kind = String(form.get("kind")) as PlanItemKind;
@@ -151,17 +151,22 @@ export async function saveItem(_prev: PlanFormState, form: FormData): Promise<Pl
   return { ok: true, at: Date.now() };
 }
 
-export async function moveItem(id: number, dir: -1 | 1) {
-  await requireAuth();
+/** The item only if its plan is on the viewer's board. */
+async function itemOnMyBoard(id: number) {
+  const { board } = await requireBoard();
   const cur = store.getItem(id);
+  return cur && store.getPlan(cur.plan_id, board.id) ? cur : null;
+}
+
+export async function moveItem(id: number, dir: -1 | 1) {
+  const cur = await itemOnMyBoard(id);
   if (!cur) return;
   store.moveItem(id, dir < 0 ? -1 : 1);
   revalidatePlans(cur.plan_id);
 }
 
 export async function deleteItem(id: number) {
-  await requireAuth();
-  const cur = store.getItem(id);
+  const cur = await itemOnMyBoard(id);
   if (!cur) return;
   store.deleteItem(id);
   revalidatePlans(cur.plan_id);

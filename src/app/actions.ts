@@ -1,33 +1,17 @@
 "use server";
 
-import { cookies } from "next/headers";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { checkPassword, createSessionValue, requireAuth, SESSION_COOKIE } from "@/lib/auth";
+import { getAuth } from "@/lib/auth";
+import { requireBoard, requireBoardAdmin } from "@/lib/viewer";
 import * as store from "@/lib/db";
 import type { TripInput } from "@/lib/db";
 import { AMOUNT_MAX, EXPENSE_TITLE_MAX, parseAmount } from "@/lib/expenses";
-import { isCategory, isMemberTag, isStatus, MEMBER_NAME_MAX, type Status } from "@/lib/trips";
-
-export async function login(_prev: string | null, form: FormData) {
-  if (!process.env.APP_PASSWORD) return "ยังไม่ได้ตั้งค่า APP_PASSWORD ในไฟล์ .env";
-  if (!checkPassword(String(form.get("password") ?? ""))) {
-    await new Promise((r) => setTimeout(r, 600)); // slow down guessing
-    return "รหัสผ่านไม่ถูกต้อง";
-  }
-  const { value, maxAge } = createSessionValue();
-  (await cookies()).set(SESSION_COOKIE, value, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    maxAge,
-    path: "/",
-  });
-  redirect("/");
-}
+import { isCategory, isRole, isStatus, MEMBER_NAME_MAX } from "@/lib/trips";
 
 export async function logout() {
-  (await cookies()).delete(SESSION_COOKIE);
+  await getAuth().api.signOut({ headers: await headers() });
   redirect("/login");
 }
 
@@ -47,7 +31,7 @@ function int(form: FormData, key: string) {
   return Number.isFinite(n) ? Math.round(n) : NaN;
 }
 
-function parseTrip(form: FormData): TripInput | string {
+function parseTrip(form: FormData, boardId: number): TripInput | string {
   const title = text(form, "title", 120);
   if (!title) return "กรุณาใส่ชื่อทริป / กิจกรรม";
 
@@ -68,7 +52,7 @@ function parseTrip(form: FormData): TripInput | string {
   if (target_month !== null && !(target_month >= 1 && target_month <= 12)) return "เดือนเป้าหมายไม่ถูกต้อง";
   if (target_year !== null && !(target_year >= 2000 && target_year <= 2200)) return "ปีเป้าหมายไม่ถูกต้อง";
 
-  const memberIds = new Set(store.listMembers().map((m) => m.id));
+  const memberIds = new Set(store.listMembers(boardId).map((m) => m.id));
   const owner_id = int(form, "owner_id");
   if (owner_id !== null && !memberIds.has(owner_id)) return "ไม่พบรายชื่อเจ้าของทริป — ลองรีเฟรชหน้า";
   const participant_ids = [...new Set(form.getAll("participant_ids").map(Number))].filter((id) => memberIds.has(id));
@@ -104,27 +88,25 @@ function parseTrip(form: FormData): TripInput | string {
 }
 
 export async function saveTrip(_prev: TripFormState, form: FormData): Promise<TripFormState> {
-  await requireAuth();
-  const input = parseTrip(form);
+  const { board } = await requireBoard();
+  const input = parseTrip(form, board.id);
   if (typeof input === "string") return { ok: false, error: input };
 
   const id = Number(form.get("id"));
-  if (id) store.updateTrip(id, input);
-  else store.createTrip(input);
+  if (id) {
+    if (!store.getTrip(id, board.id)) return { ok: false, error: "ไม่พบทริปนี้ — อาจถูกลบไปแล้ว" };
+    store.updateTrip(id, input);
+  } else {
+    store.createTrip(board.id, input);
+  }
 
   revalidatePath("/");
   return { ok: true, at: Date.now() };
 }
 
-export async function moveTrip(id: number, status: Status) {
-  await requireAuth();
-  if (!isStatus(status)) throw new Error("Invalid status");
-  store.setTripStatus(id, status);
-  revalidatePath("/");
-}
-
 export async function removeTrip(id: number) {
-  await requireAuth();
+  const { board } = await requireBoard();
+  if (!store.getTrip(id, board.id)) return;
   store.deleteTrip(id);
   revalidatePath("/");
 }
@@ -137,54 +119,57 @@ function cleanName(raw: unknown) {
   return String(raw ?? "").replace(/\s+/g, " ").trim();
 }
 
+/** Admins add names for friends who don't use the app (they can still be on trips / bills). */
 export async function addMembers(_prev: MemberFormState, form: FormData): Promise<MemberFormState> {
-  await requireAuth();
+  const { board } = await requireBoardAdmin();
   // Accept several names at once: "ต้น, แบม" or one per line.
   const names = [...new Set(String(form.get("names") ?? "").split(/[,\n]/).map(cleanName).filter(Boolean))];
   if (names.length === 0) return { ok: false, message: "ใส่ชื่ออย่างน้อย 1 ชื่อ", at: Date.now() };
   const tooLong = names.find((n) => n.length > MEMBER_NAME_MAX);
   if (tooLong) return { ok: false, message: `ชื่อยาวเกิน ${MEMBER_NAME_MAX} ตัวอักษร: ${tooLong}`, at: Date.now() };
 
-  const tags = [...new Set(form.getAll("tags"))].filter(isMemberTag);
-  if (tags.length === 0) return { ok: false, message: "เลือกแท็กอย่างน้อย 1 อัน", at: Date.now() };
-
-  const { added, tagged } = store.addMembers(names, tags);
+  const added = store.addMembers(board.id, names);
   revalidatePath("/", "layout");
-  const skipped = names.length - added - tagged;
-  const parts = [
-    added && `เพิ่ม ${added} คนแล้ว`,
-    tagged && `ติดแท็กให้ ${tagged} ชื่อที่มีอยู่แล้ว`,
-    added + tagged > 0 && skipped && `ข้าม ${skipped} ชื่อที่มีอยู่แล้ว`,
-  ].filter(Boolean);
+  const skipped = names.length - added;
   return {
-    ok: added + tagged > 0,
-    message: parts.length ? parts.join(" · ") : "มีชื่อนี้อยู่แล้ว",
+    ok: added > 0,
+    message: added ? `เพิ่ม ${added} คนแล้ว${skipped ? ` · ข้าม ${skipped} ชื่อที่มีอยู่แล้ว` : ""}` : "มีชื่อนี้อยู่แล้ว",
     at: Date.now(),
   };
 }
 
-export async function setMemberTags(id: number, rawTags: string[]) {
-  await requireAuth();
-  const tags = [...new Set(rawTags)].filter(isMemberTag);
-  if (tags.length === 0) return; // keep at least one; the UI blocks this too
-  store.setMemberTags(id, tags);
+export async function setMemberRole(id: number, role: string): Promise<string | null> {
+  const { board } = await requireBoardAdmin();
+  if (!isRole(role)) return "สิทธิ์ไม่ถูกต้อง";
+  const m = store.getMember(id, board.id);
+  if (!m) return "ไม่พบรายชื่อนี้ — ลองรีเฟรชหน้า";
+  if (!m.linked) return "ชื่อนี้ยังไม่มีใครเข้าสู่ระบบ — ตั้งเป็นแอดมินไม่ได้";
+  if (m.role === "admin" && role !== "admin" && store.countAdmins(board.id) <= 1) return "บอร์ดต้องมีแอดมินอย่างน้อย 1 คน";
+  store.setMemberRole(id, role);
   revalidatePath("/", "layout");
+  return null;
 }
 
+/** Admins can rename anyone; everyone can change their own nickname. */
 export async function renameMember(id: number, rawName: string): Promise<string | null> {
-  await requireAuth();
+  const { board, me } = await requireBoard();
+  if (id !== me.id && me.role !== "admin") return "แก้ได้เฉพาะชื่อของตัวเอง";
+  if (!store.getMember(id, board.id)) return "ไม่พบรายชื่อนี้ — ลองรีเฟรชหน้า";
   const name = cleanName(rawName);
   if (!name) return "ชื่อห้ามว่าง";
   if (name.length > MEMBER_NAME_MAX) return `ชื่อยาวเกิน ${MEMBER_NAME_MAX} ตัวอักษร`;
-  const clash = store.listMembers().find((m) => m.id !== id && m.name.toLowerCase() === name.toLowerCase());
-  if (clash) return "มีชื่อนี้อยู่แล้ว";
+  const clash = store.memberByName(board.id, name);
+  if (clash && clash.id !== id) return "มีคนใช้ชื่อนี้ในบอร์ดแล้ว";
   store.renameMember(id, name);
   revalidatePath("/", "layout");
   return null;
 }
 
+/** Removing a signed-in person takes them off the board (they'd need the code to come back). */
 export async function removeMember(id: number) {
-  await requireAuth();
+  const { board, me } = await requireBoardAdmin();
+  if (id === me.id) throw new Error("Can't remove yourself");
+  if (!store.getMember(id, board.id)) return;
   store.deleteMember(id);
   revalidatePath("/", "layout");
 }
@@ -200,15 +185,15 @@ function revalidateExpenses(tripId: number) {
   revalidatePath("/"); // card shows the trip total
 }
 
-function knownMembers(ids: unknown[]) {
-  const all = new Set(store.listMembers().map((m) => m.id));
+function knownMembers(boardId: number, ids: unknown[]) {
+  const all = new Set(store.listMembers(boardId).map((m) => m.id));
   return [...new Set(ids.map(Number))].filter((id) => all.has(id));
 }
 
 export async function saveExpense(_prev: ExpenseFormState, form: FormData): Promise<ExpenseFormState> {
-  await requireAuth();
+  const { board } = await requireBoard();
   const tripId = Number(form.get("trip_id"));
-  if (!store.getTrip(tripId)) return { ok: false, error: "ไม่พบทริปนี้ — อาจถูกลบไปแล้ว" };
+  if (!store.getTrip(tripId, board.id)) return { ok: false, error: "ไม่พบทริปนี้ — อาจถูกลบไปแล้ว" };
 
   const title = text(form, "title", EXPENSE_TITLE_MAX);
   if (!title) return { ok: false, error: "ใส่ชื่อรายการด้วยนะ" };
@@ -217,11 +202,11 @@ export async function saveExpense(_prev: ExpenseFormState, form: FormData): Prom
   if (amount === null) return { ok: false, error: "ใส่จำนวนเงินด้วยนะ" };
   if (!(amount > 0 && amount <= AMOUNT_MAX)) return { ok: false, error: "จำนวนเงินไม่ถูกต้อง (ทศนิยมได้ไม่เกิน 2 ตำแหน่ง)" };
 
-  const [payer_id] = knownMembers([form.get("payer_id")].filter(Boolean));
+  const [payer_id] = knownMembers(board.id, [form.get("payer_id")].filter(Boolean));
   if (payer_id === undefined) return { ok: false, error: "เลือกคนที่จ่ายด้วยนะ" };
 
   const split_all = form.get("split_all") === "1";
-  const share_ids = knownMembers(form.getAll("share_ids"));
+  const share_ids = knownMembers(board.id, form.getAll("share_ids"));
   if (!split_all && share_ids.length === 0) return { ok: false, error: "เลือกคนที่หารอย่างน้อย 1 คน" };
 
   const input = { title, amount, payer_id, split_all, share_ids };
@@ -239,26 +224,26 @@ export async function saveExpense(_prev: ExpenseFormState, form: FormData): Prom
 
 /** Tick / untick people straight from the table. */
 export async function setExpenseShares(id: number, memberIds: number[]) {
-  await requireAuth();
+  const { board } = await requireBoard();
   const e = store.getExpense(id);
-  if (!e) return;
-  const ids = knownMembers(memberIds);
+  if (!e || !store.getTrip(e.trip_id, board.id)) return;
+  const ids = knownMembers(board.id, memberIds);
   if (ids.length === 0) return; // keep at least one sharer; the UI blocks this too
   store.setExpenseShares(id, ids);
   revalidateExpenses(e.trip_id);
 }
 
 export async function removeExpense(id: number) {
-  await requireAuth();
+  const { board } = await requireBoard();
   const e = store.getExpense(id);
-  if (!e) return;
+  if (!e || !store.getTrip(e.trip_id, board.id)) return;
   store.deleteExpense(id);
   revalidateExpenses(e.trip_id);
 }
 
 export async function setSettled(tripId: number, memberId: number, settled: boolean) {
-  await requireAuth();
-  if (!store.getTrip(tripId) || knownMembers([memberId]).length === 0) return;
+  const { board } = await requireBoard();
+  if (!store.getTrip(tripId, board.id) || knownMembers(board.id, [memberId]).length === 0) return;
   store.setSettled(tripId, memberId, settled);
   revalidatePath(expensesPath(tripId));
 }

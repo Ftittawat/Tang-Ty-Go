@@ -97,16 +97,20 @@ export function daysUntil(date: string | null, today = new Date()) {
   return Math.round((Date.UTC(y, m - 1, day) - t) / 86_400_000);
 }
 
-export const MEMBER_TAGS = [
-  { id: "general", label: "ทั่วไป", hint: "ทริป / กิจกรรม / หารบิล", on: "bg-sky-600/10 text-sky-700 ring-sky-600/40" },
-  { id: "badminton", label: "แบดมินตัน", hint: "ลงชื่อตีแบด", on: "bg-[#34c759]/12 text-[#248a3d] ring-[#34c759]/50" },
+export const ROLES = [
+  { id: "admin", label: "แอดมิน", hint: "จัดการรายชื่อ สิทธิ์ และรหัสบอร์ดได้" },
+  { id: "member", label: "สมาชิก", hint: "ใช้บอร์ด แผนเที่ยว และหารบิลได้" },
 ] as const;
 
-/** Which pickers a name shows up in: "general" for trips and bills, "badminton" for the sign-up page. */
-export type MemberTag = (typeof MEMBER_TAGS)[number]["id"];
-export const isMemberTag = (v: unknown): v is MemberTag => MEMBER_TAGS.some((t) => t.id === v);
+export type Role = (typeof ROLES)[number]["id"];
+export const isRole = (v: unknown): v is Role => ROLES.some((r) => r.id === v);
 
-export type Member = { id: number; name: string; tags: MemberTag[] };
+/** A name on a board. `linked` = someone signed in as this name; unlinked names are just for trips / bills. */
+export type Member = { id: number; name: string; linked: boolean; role: Role };
+
+export type Board = { id: number; name: string; code: string };
+
+export const BOARD_NAME_MAX = 60;
 
 export const MEMBER_NAME_MAX = 40;
 
@@ -115,4 +119,38 @@ export function sortKey(t: Trip) {
   if (t.start_date) return t.start_date;
   if (t.target_year) return `${t.target_year}-${String(t.target_month ?? 12).padStart(2, "0")}-99`;
   return "9999";
+}
+
+/** Has a real date or at least a rough month / year. */
+export const hasWhen = (t: Trip) => !!(t.start_date || t.target_year || t.target_month);
+
+const pad = (n: number) => String(n).padStart(2, "0");
+const localISO = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+/** Last day the trip could still be happening ("YYYY-MM-DD"), or null if open-ended (month without year). */
+function lastDay(t: Trip) {
+  if (t.start_date) return t.end_date ?? t.start_date;
+  if (!t.target_year) return null;
+  const m = t.target_month ?? 12;
+  return `${t.target_year}-${pad(m)}-${pad(new Date(t.target_year, m, 0).getDate())}`;
+}
+
+/**
+ * Board sections: trips with a date / rough period (soonest first, then the ones already over,
+ * most recent first) and trips with no date yet (newest idea first).
+ */
+export function groupByWhen(trips: Trip[], today = new Date()) {
+  const now = localISO(today);
+  const dated = trips.filter(hasWhen);
+  const isPast = (t: Trip) => {
+    const end = lastDay(t);
+    return end !== null && end < now;
+  };
+  return {
+    upcoming: dated
+      .filter((t) => !isPast(t))
+      .sort((a, b) => sortKey(a).localeCompare(sortKey(b)) || b.created_at.localeCompare(a.created_at)),
+    past: dated.filter(isPast).sort((a, b) => lastDay(b)!.localeCompare(lastDay(a)!)),
+    undated: trips.filter((t) => !hasWhen(t)).sort((a, b) => b.created_at.localeCompare(a.created_at)),
+  };
 }

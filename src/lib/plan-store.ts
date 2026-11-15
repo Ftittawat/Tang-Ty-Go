@@ -7,18 +7,20 @@ export type PlanSummary = Plan & { activity_count: number };
 export type PlanInput = Pick<Plan, "title" | "trip_id" | "start_date" | "day_count" | "note">;
 export type ItemInput = Omit<PlanItem, "id" | "plan_id" | "position">;
 
-export function listPlans(): PlanSummary[] {
+export function listPlans(boardId: number): PlanSummary[] {
   return db()
     .prepare(`
       SELECT p.*, (SELECT COUNT(*) FROM plan_items i WHERE i.plan_id = p.id AND i.kind = 'activity') AS activity_count
       FROM plans p
+      WHERE p.board_id = ?
       ORDER BY (p.start_date IS NULL), p.start_date, p.updated_at DESC
     `)
-    .all() as PlanSummary[];
+    .all(boardId) as PlanSummary[];
 }
 
-export function getPlan(id: number) {
-  return db().prepare("SELECT * FROM plans WHERE id = ?").get(id) as Plan | undefined;
+/** The plan only if it's on this board (guards every page and action that takes a plan id). */
+export function getPlan(id: number, boardId: number) {
+  return db().prepare("SELECT * FROM plans WHERE id = ? AND board_id = ?").get(id, boardId) as Plan | undefined;
 }
 
 export function getItems(planId: number) {
@@ -32,11 +34,14 @@ export function firstPlanForTrip(tripId: number) {
     { id: number } | undefined;
 }
 
-export function createPlan(input: PlanInput) {
+export function createPlan(boardId: number, input: PlanInput) {
   return Number(
     db()
-      .prepare("INSERT INTO plans (title, trip_id, start_date, day_count, note) VALUES (@title, @trip_id, @start_date, @day_count, @note)")
-      .run(input).lastInsertRowid,
+      .prepare(`
+        INSERT INTO plans (board_id, title, trip_id, start_date, day_count, note)
+        VALUES (@board_id, @title, @trip_id, @start_date, @day_count, @note)
+      `)
+      .run({ ...input, board_id: boardId }).lastInsertRowid,
   );
 }
 

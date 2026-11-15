@@ -1,15 +1,20 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { isValidSession, SESSION_COOKIE } from "@/lib/auth";
+import { sessionFromHeaders } from "@/lib/auth";
 
-export function proxy(request: NextRequest) {
-  if (isValidSession(request.cookies.get(SESSION_COOKIE)?.value)) return NextResponse.next();
-  if (request.nextUrl.pathname.startsWith("/api/")) {
+/** Any signed-in Google account gets past here; pages decide which board (if any) they can see. */
+export async function proxy(request: NextRequest) {
+  if (await sessionFromHeaders(request.headers)) return NextResponse.next();
+  const { pathname, search } = request.nextUrl;
+  if (pathname.startsWith("/api/")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  return NextResponse.redirect(new URL("/login", request.url));
+  const url = new URL("/login", request.url);
+  // Come back here after Google (e.g. an invite link /join/K7QM-3XPA).
+  if (pathname !== "/") url.searchParams.set("next", pathname + search);
+  return NextResponse.redirect(url);
 }
 
 export const config = {
-  // Public: login page, the badminton sign-up page, static assets and icons.
-  matcher: ["/((?!login|badminton|_next/static|_next/image|.*\\.(?:ico|png|svg|webmanifest)$).*)"],
+  // Public: login page, Better Auth's own endpoints (/api/auth/*), static assets and icons.
+  matcher: ["/((?!login|api/auth|_next/static|_next/image|.*\\.(?:ico|png|svg|webmanifest)$).*)"],
 };

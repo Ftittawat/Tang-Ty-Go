@@ -1,59 +1,31 @@
 "use client";
 
-import {
-  startTransition, useActionState, useEffect, useOptimistic, useRef, useState, useTransition, type FormEvent,
-} from "react";
-import { addMembers, removeMember, renameMember, setMemberTags } from "@/app/actions";
+import { startTransition, useActionState, useEffect, useOptimistic, useRef, useState, useTransition, type FormEvent } from "react";
+import { addMembers, removeMember, renameMember, setMemberRole } from "@/app/actions";
 import { Avatar, dangerBtn, ghostBtn, inputCls, pillCls, primaryBtn } from "@/components/ui";
-import { MEMBER_NAME_MAX, MEMBER_TAGS, type Member, type MemberTag } from "@/lib/trips";
+import { MEMBER_NAME_MAX, ROLES, type Member, type Role } from "@/lib/trips";
 
-/** One toggle pill per tag; the last tag left can't be switched off. */
-function TagPills({ value, onToggle, disabled }: { value: MemberTag[]; onToggle: (t: MemberTag) => void; disabled?: boolean }) {
-  return (
-    <span className="flex flex-wrap gap-1">
-      {MEMBER_TAGS.map((t) => {
-        const on = value.includes(t.id);
-        const last = on && value.length === 1;
-        return (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => onToggle(t.id)}
-            disabled={disabled || last}
-            aria-pressed={on}
-            title={last ? "ต้องมีอย่างน้อย 1 แท็ก" : `ใช้สำหรับ: ${t.hint}`}
-            className={`${pillCls} py-0.5 ring-1 transition disabled:cursor-default ${
-              on ? t.on : "bg-white text-slate-400 ring-black/[0.08] hover:text-slate-600"
-            }`}
-          >
-            {t.label}
-          </button>
-        );
-      })}
-    </span>
-  );
-}
+const ROLE_PILL: Record<Role, string> = {
+  admin: "bg-[#ff9500]/12 text-[#c93400]",
+  member: "bg-black/[0.05] text-slate-500",
+};
 
-const toggled = (tags: MemberTag[], t: MemberTag) => (tags.includes(t) ? tags.filter((x) => x !== t) : [...tags, t]);
-
-function MemberRow({ member, used }: { member: Member; used: number }) {
+function MemberRow({ member, used, canEdit, isMe }: { member: Member; used: number; canEdit: boolean; isMe: boolean }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(member.name);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
-  const [tags, setTags] = useOptimistic(member.tags);
+  const [role, setRole] = useOptimistic(member.role);
 
-  const toggleTag = (t: MemberTag) => {
-    const next = toggled(tags, t);
-    start(async () => {
-      setTags(next);
-      await setMemberTags(member.id, next);
-    });
+  const cancel = () => {
+    setName(member.name);
+    setError(null);
+    setEditing(false);
   };
 
   const save = (e: FormEvent) => {
     e.preventDefault();
-    if (name.trim() === member.name) return setEditing(false);
+    if (name.trim() === member.name) return cancel();
     start(async () => {
       const err = await renameMember(member.id, name);
       setError(err);
@@ -61,11 +33,22 @@ function MemberRow({ member, used }: { member: Member; used: number }) {
     });
   };
 
+  const changeRole = (next: Role) =>
+    start(async () => {
+      setRole(next);
+      setError(await setMemberRole(member.id, next));
+    });
+
   const remove = () => {
-    const note = used > 0 ? `\nชื่อนี้อยู่ใน ${used} ทริป — จะถูกเอาออกจากทริปเหล่านั้น` : "";
-    if (!confirm(`ลบ “${member.name}” ออกจากรายชื่อ?${note}`)) return;
+    const notes = [
+      member.linked && "คนนี้จะถูกเอาออกจากบอร์ด (ต้องใช้รหัสบอร์ดเพื่อเข้ามาใหม่)",
+      used > 0 && `ชื่อนี้อยู่ใน ${used} ทริป — จะถูกเอาออกจากทริปเหล่านั้น`,
+    ].filter(Boolean);
+    if (!confirm(`ลบ “${member.name}” ออกจากรายชื่อ?${notes.map((n) => `\n${n}`).join("")}`)) return;
     start(() => removeMember(member.id));
   };
+
+  const rolePill = <span className={`${pillCls} ${ROLE_PILL[role]}`}>{ROLES.find((r) => r.id === role)?.label}</span>;
 
   return (
     <li className="py-2.5">
@@ -75,45 +58,52 @@ function MemberRow({ member, used }: { member: Member; used: number }) {
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Escape") {
-                setName(member.name);
-                setError(null);
-                setEditing(false);
-              }
-            }}
+            onKeyDown={(e) => e.key === "Escape" && cancel()}
             maxLength={MEMBER_NAME_MAX}
             autoFocus
             aria-label="ชื่อ"
             className={`${inputCls} min-w-0 flex-1`}
           />
           <button disabled={pending} className={primaryBtn}>บันทึก</button>
-          <button
-            type="button"
-            onClick={() => {
-              setName(member.name);
-              setError(null);
-              setEditing(false);
-            }}
-            className={ghostBtn}
-          >
-            ยกเลิก
-          </button>
+          <button type="button" onClick={cancel} className={ghostBtn}>ยกเลิก</button>
         </form>
       ) : (
         <div className="flex items-center gap-3">
           <Avatar name={member.name} className="size-8 text-sm" />
           <div className="min-w-0 flex-1">
-            <span className="block truncate font-medium">{member.name}</span>
-            <span className="mt-1 block"><TagPills value={tags} onToggle={toggleTag} /></span>
+            <span className="flex items-center gap-1.5">
+              <span className="truncate font-medium">{member.name}</span>
+              {isMe && <span className="shrink-0 text-xs text-slate-400">(คุณ)</span>}
+            </span>
+            <span className="block truncate text-xs text-slate-400">
+              {member.linked ? "เข้าร่วมแล้ว" : "ชื่ออย่างเดียว — ยังไม่มีใครเข้าร่วมในชื่อนี้"}
+            </span>
           </div>
           <span className="hidden text-xs text-slate-400 sm:inline">{used > 0 ? `${used} ทริป` : "ยังไม่มีทริป"}</span>
-          <button onClick={() => setEditing(true)} disabled={pending} className={`${ghostBtn} px-2.5 py-1.5 text-xs`}>
-            แก้ชื่อ
-          </button>
-          <button onClick={remove} disabled={pending} className={`${dangerBtn} px-2.5 py-1.5 text-xs`}>
-            ลบ
-          </button>
+          {canEdit && member.linked ? (
+            <select
+              value={role}
+              onChange={(e) => changeRole(e.target.value as Role)}
+              disabled={pending}
+              aria-label={`สิทธิ์ของ ${member.name}`}
+              title={ROLES.find((r) => r.id === role)?.hint}
+              className={`${pillCls} ${ROLE_PILL[role]} cursor-pointer border-0 py-1 outline-none`}
+            >
+              {ROLES.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
+            </select>
+          ) : member.linked && rolePill}
+          {canEdit && (
+            <>
+              <button onClick={() => setEditing(true)} disabled={pending} className={`${ghostBtn} px-2.5 py-1.5 text-xs`}>
+                แก้ชื่อ
+              </button>
+              {!isMe && (
+                <button onClick={remove} disabled={pending} className={`${dangerBtn} px-2.5 py-1.5 text-xs`}>
+                  ลบ
+                </button>
+              )}
+            </>
+          )}
         </div>
       )}
       {error && <p className="mt-1 pl-11 text-sm text-rose-600">{error}</p>}
@@ -121,14 +111,16 @@ function MemberRow({ member, used }: { member: Member; used: number }) {
   );
 }
 
-const FILTERS = [{ id: "all", label: "ทั้งหมด" }, ...MEMBER_TAGS] as const;
-
-export function MembersManager({ members, usage }: { members: Member[]; usage: Record<number, number> }) {
+export function MembersManager({
+  members, usage, isAdmin, meId,
+}: {
+  members: Member[];
+  usage: Record<number, number>;
+  isAdmin: boolean;
+  meId: number | null;
+}) {
   const [state, action, pending] = useActionState(addMembers, null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const [newTags, setNewTags] = useState<MemberTag[]>(["general"]);
-  const [filter, setFilter] = useState<(typeof FILTERS)[number]["id"]>("all");
-  const shown = filter === "all" ? members : members.filter((m) => m.tags.includes(filter));
 
   // Clear the box only after a successful add, so a typo can be fixed in place.
   useEffect(() => {
@@ -146,30 +138,27 @@ export function MembersManager({ members, usage }: { members: Member[]; usage: R
 
   return (
     <div>
-      <form onSubmit={onSubmit}>
-        {newTags.map((t) => <input key={t} type="hidden" name="tags" value={t} />)}
-        <div className="flex gap-2">
-          <input
-            ref={inputRef}
-            name="names"
-            placeholder="เพิ่มชื่อ — ใส่หลายคนได้ คั่นด้วย , เช่น ต้น, แบม"
-            aria-label="ชื่อที่จะเพิ่ม"
-            autoComplete="off"
-            className={`${inputCls} min-w-0 flex-1`}
-          />
-          <button disabled={pending} className={`${primaryBtn} shrink-0`}>
-            {pending ? "กำลังเพิ่ม…" : "เพิ่ม"}
-          </button>
-        </div>
-        <div className="mt-2 flex items-center gap-2 text-xs text-slate-500">
-          ใช้สำหรับ
-          <TagPills value={newTags} onToggle={(t) => setNewTags((v) => toggled(v, t))} />
-        </div>
-      </form>
-      {state && (
-        <p key={state.at} className={`mt-2 text-sm ${state.ok ? "text-emerald-600" : "text-rose-600"}`}>
-          {state.message}
-        </p>
+      {isAdmin && (
+        <>
+          <form onSubmit={onSubmit} className="flex gap-2">
+            <input
+              ref={inputRef}
+              name="names"
+              placeholder="เพิ่มชื่อคนที่ไม่ได้ใช้แอป — คั่นด้วย , เช่น ต้น, แบม"
+              aria-label="ชื่อที่จะเพิ่ม"
+              autoComplete="off"
+              className={`${inputCls} min-w-0 flex-1`}
+            />
+            <button disabled={pending} className={`${primaryBtn} shrink-0`}>
+              {pending ? "กำลังเพิ่ม…" : "เพิ่ม"}
+            </button>
+          </form>
+          {state && (
+            <p key={state.at} className={`mt-2 text-sm ${state.ok ? "text-emerald-600" : "text-rose-600"}`}>
+              {state.message}
+            </p>
+          )}
+        </>
       )}
 
       {members.length === 0 ? (
@@ -177,31 +166,17 @@ export function MembersManager({ members, usage }: { members: Member[]; usage: R
           ยังไม่มีรายชื่อ — เพิ่มชื่อเพื่อนในแก๊งได้เลย
         </p>
       ) : (
-        <>
-          <div className="mt-4 flex gap-1 rounded-full bg-black/[0.05] p-1 text-xs" role="group" aria-label="กรองตามแท็ก">
-            {FILTERS.map((f) => {
-              const n = f.id === "all" ? members.length : members.filter((m) => m.tags.includes(f.id)).length;
-              return (
-                <button
-                  key={f.id}
-                  type="button"
-                  onClick={() => setFilter(f.id)}
-                  aria-pressed={filter === f.id}
-                  className={`flex-1 rounded-full px-3 py-1.5 font-medium transition ${
-                    filter === f.id ? "bg-white text-slate-900 shadow-[0_1px_3px_rgb(0_0_0/0.1)]" : "text-slate-500 hover:text-slate-900"
-                  }`}
-                >
-                  {f.label} <span className="text-slate-400">{n}</span>
-                </button>
-              );
-            })}
-          </div>
-          <ul className="mt-2 divide-y divide-black/[0.05]">
-            {shown.map((m) => (
-              <MemberRow key={`${m.id}:${m.name}`} member={m} used={usage[m.id] ?? 0} />
-            ))}
-          </ul>
-        </>
+        <ul className={`divide-y divide-black/[0.05] ${isAdmin ? "mt-2" : ""}`}>
+          {members.map((m) => (
+            <MemberRow
+              key={`${m.id}:${m.name}:${m.role}`}
+              member={m}
+              used={usage[m.id] ?? 0}
+              canEdit={isAdmin}
+              isMe={m.id === meId}
+            />
+          ))}
+        </ul>
       )}
     </div>
   );
