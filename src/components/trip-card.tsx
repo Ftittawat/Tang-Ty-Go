@@ -3,12 +3,12 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import {
-  BanknoteIcon, CalendarIcon, LinkIcon, MapIcon, MapPinIcon, WalletIcon,
+  BanknoteIcon, CalendarIcon, CalendarPlusIcon, LinkIcon, MapIcon, MapPinIcon, WalletIcon,
 } from "@/components/icons";
 import { AvatarStack, pillCls } from "@/components/ui";
 import { formatBaht } from "@/lib/expenses";
 import {
-  be, categoryOf, daysUntil, formatDateRange, formatTarget, MONTHS_TH, STATUSES, tripNights, type Trip,
+  be, categoryOf, daysUntil, formatDateRange, formatTarget, googleCalendarUrl, MONTHS_TH, STATUSES, tripNights, type Trip,
 } from "@/lib/trips";
 
 type Meter = { label: string; value: string; pct: number; over?: boolean; hint: string };
@@ -49,7 +49,7 @@ function Ticks({ pct, accent }: { pct: number; accent: string }) {
         <span
           key={i}
           className={`rounded-full ${
-            i === filled - 1 ? `h-5 w-[3px] ${accent}` : i < filled ? `h-3 w-px ${accent}` : "h-3 w-px bg-slate-300"
+            i === filled - 1 ? `h-5 w-0.75 ${accent}` : i < filled ? `h-3 w-px ${accent}` : "h-3 w-px bg-slate-300"
           }`}
         />
       ))}
@@ -72,14 +72,14 @@ function WhenTile({ trip, tint }: { trip: Trip; tint: string }) {
   }
   if (trip.target_month || trip.target_year) {
     return (
-      <span className={`${box} border border-dashed border-black/15 bg-black/[0.02] text-slate-600`}>
+      <span className={`${box} border border-dashed border-black/15 bg-black/2 text-slate-600`}>
         <span className="text-[10px] font-medium text-slate-400">ประมาณ</span>
         <span className="mt-1 text-[15px] font-semibold">{trip.target_month ? MONTHS_TH[trip.target_month - 1] : "ปี"}</span>
         {trip.target_year && <span className="mt-0.5 text-[10px] text-slate-500 tabular-nums">{be(trip.target_year)}</span>}
       </span>
     );
   }
-  return <span className={`${box} bg-black/[0.04] text-[28px]`}>{categoryOf(trip.category).emoji}</span>;
+  return <span className={`${box} bg-black/4 text-[28px]`}>{categoryOf(trip.category).emoji}</span>;
 }
 
 function Meta({ icon, children }: { icon: ReactNode; children: ReactNode }) {
@@ -108,10 +108,11 @@ export function TripCard({ trip, names, onOpen, past = false }: { trip: Trip; na
   const people = owner ? [owner, ...others] : others;
   const status = STATUSES.find((s) => s.id === trip.status) ?? STATUSES[0];
   const meter = past ? null : meterOf(trip);
+  const calendarUrl = past ? null : googleCalendarUrl(trip);
 
   return (
     <article
-      className={`group relative flex gap-4 rounded-[22px] p-4 shadow-card ring-1 ring-black/[0.04] transition duration-200 hover:-translate-y-0.5 hover:shadow-lift sm:p-5 ${
+      className={`group relative flex gap-4 rounded-[22px] p-4 shadow-card ring-1 ring-black/4 transition duration-200 hover:-translate-y-0.5 hover:shadow-lift sm:p-5 ${
         past ? "bg-white/60" : "bg-white"
       }`}
     >
@@ -122,13 +123,13 @@ export function TripCard({ trip, names, onOpen, past = false }: { trip: Trip; na
       <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className={`${pillCls} bg-black/[0.04] py-0.5 text-slate-600`}>{cat.emoji} {cat.label}</span>
+            <span className={`${pillCls} bg-black/4 py-0.5 text-slate-600`}>{cat.emoji} {cat.label}</span>
             <span className={`${pillCls} py-0.5 ${status.soft} ${status.text}`}>
               <span className={`size-1.5 rounded-full ${status.dot}`} />
               {status.th}
             </span>
           </div>
-          <h3 className={`mt-1.5 text-[16px] font-semibold leading-normal break-words ${past ? "text-slate-500" : ""}`}>{trip.title}</h3>
+          <h3 className={`mt-1.5 text-[16px] font-semibold leading-normal wrap-break-word ${past ? "text-slate-500" : ""}`}>{trip.title}</h3>
           {trip.description && <p className="line-clamp-1 text-[13px] leading-relaxed text-slate-500">{trip.description}</p>}
 
           <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-slate-600">
@@ -159,11 +160,22 @@ export function TripCard({ trip, names, onOpen, past = false }: { trip: Trip; na
                 <LinkIcon className="size-4 text-slate-400" />ลิงก์
               </a>
             )}
+            {calendarUrl && (
+              <a
+                href={calendarUrl}
+                target="_blank"
+                rel="noreferrer"
+                title="เพิ่มลงใน Google Calendar ของคุณ"
+                className={`${footLink} font-medium text-sky-700 hover:bg-sky-600/10 hover:text-sky-800`}
+              >
+                <CalendarPlusIcon className="size-4" />Add to Calendar
+              </a>
+            )}
           </div>
         </div>
 
         {(meter || people.length > 0) && (
-          <div className="flex shrink-0 flex-col gap-3 sm:w-80 sm:items-end lg:w-[26rem]">
+          <div className="flex shrink-0 flex-col gap-3 sm:w-80 sm:items-end lg:w-104">
             {meter && (
               <div
                 className="w-full"

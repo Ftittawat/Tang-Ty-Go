@@ -154,3 +154,25 @@ export function groupByWhen(trips: Trip[], today = new Date()) {
     undated: trips.filter((t) => !hasWhen(t)).sort((a, b) => b.created_at.localeCompare(a.created_at)),
   };
 }
+
+const ymd = (iso: string) => iso.replaceAll("-", "");
+
+function addDaysISO(iso: string, n: number) {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
+}
+
+/**
+ * "Add to Google Calendar" link for a trip with a real start date: opens the user's own Google
+ * Calendar with an all-day event pre-filled (nothing is saved until they press Save there).
+ * Google's end date is exclusive, hence the +1 day.
+ */
+export function googleCalendarUrl(t: Trip) {
+  if (!t.start_date) return null;
+  const end = addDaysISO(t.end_date ?? t.start_date, 1);
+  const details = [t.description, t.link].filter(Boolean).join("\n\n");
+  const params = new URLSearchParams({ action: "TEMPLATE", text: t.title, dates: `${ymd(t.start_date)}/${ymd(end)}` });
+  if (details) params.set("details", details);
+  if (t.location) params.set("location", t.location);
+  return `https://calendar.google.com/calendar/render?${params}`;
+}
