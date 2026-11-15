@@ -94,8 +94,8 @@ export function createItem(planId: number, input: ItemInput, beforeId?: number) 
     }
     const id = d
       .prepare(`
-        INSERT INTO plan_items (plan_id, day, position, kind, title, details, location, start_time, duration_min, travel_mode)
-        VALUES (@plan_id, @day, @position, @kind, @title, @details, @location, @start_time, @duration_min, @travel_mode)
+        INSERT INTO plan_items (plan_id, day, position, kind, title, details, location, start_time, duration_min, travel_mode, activity_type)
+        VALUES (@plan_id, @day, @position, @kind, @title, @details, @location, @start_time, @duration_min, @travel_mode, @activity_type)
       `)
       .run({ ...input, plan_id: planId, day, position }).lastInsertRowid;
     touch(planId);
@@ -112,7 +112,8 @@ export function updateItem(id: number, input: ItemInput) {
     const position = cur.day === input.day ? cur.position : nextPosition(cur.plan_id, input.day);
     d.prepare(`
       UPDATE plan_items SET day = @day, position = @position, kind = @kind, title = @title, details = @details,
-        location = @location, start_time = @start_time, duration_min = @duration_min, travel_mode = @travel_mode
+        location = @location, start_time = @start_time, duration_min = @duration_min, travel_mode = @travel_mode,
+        activity_type = @activity_type
       WHERE id = @id
     `).run({ ...input, position, id });
     touch(cur.plan_id);

@@ -26,7 +26,7 @@ export default async function LoginPage(props: PageProps<"/login">) {
           <Logo className="mx-auto size-28 shadow-lift" />
           <h1 className="sr-only">Tang-Ty Go</h1>
           <p className="mt-5 text-xl font-semibold">ยินดีต้อนรับ</p>
-          <p className="mt-1 text-sm text-slate-500">{next.startsWith("/join/") ? "ต้องเข้าสู่ระบบ เพื่อดำเนินการต่อ" : "Tang-Ty Go"}</p>
+          <p className="mt-1 text-sm text-slate-500">{next.startsWith("/join/") ? "เข้าสู่ระบบ เพื่อดำเนินการต่อ" : "Tang-Ty Go"}</p>
         </div>
         {error && <p role="alert" className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-600">{error}</p>}
         <GoogleSignIn next={next} />
