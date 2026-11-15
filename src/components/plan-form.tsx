@@ -1,5 +1,6 @@
 "use client";
 
+import { Select } from "@/components/select";
 import { startTransition, useActionState, useEffect, useState, type FormEvent } from "react";
 import { createPlan, updatePlan, type PlanFormState } from "@/app/plan-actions";
 import { useModalClose } from "@/components/modal";
@@ -56,17 +57,19 @@ export function PlanForm({
       <div className="space-y-4 overflow-y-auto px-5 py-4">
         <div>
           <label htmlFor="plan-trip" className={labelCls}>ลิงก์กับทริป</label>
-          <select id="plan-trip" name="trip_id" value={tripId} onChange={(e) => pickTrip(e.target.value)} className={inputCls}>
-            <option value="">— ไม่ลิงก์กับทริป —</option>
-            {trips.map((t) => {
-              const dates = formatDateRange(t.start_date, t.end_date);
-              return (
-                <option key={t.id} value={t.id}>
-                  {categoryOf(t.category).emoji} {t.title}{dates ? ` · ${dates}` : ""}
-                </option>
-              );
-            })}
-          </select>
+          <Select
+            id="plan-trip"
+            name="trip_id"
+            value={tripId}
+            onChange={pickTrip}
+            options={[
+              { value: "", label: "— ไม่ลิงก์กับทริป —" },
+              ...trips.map((t) => {
+                const dates = formatDateRange(t.start_date, t.end_date);
+                return { value: String(t.id), label: `${categoryOf(t.category).emoji} ${t.title}${dates ? ` · ${dates}` : ""}` };
+              }),
+            ]}
+          />
         </div>
 
         <div>

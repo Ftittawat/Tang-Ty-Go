@@ -1,5 +1,6 @@
 "use client";
 
+import { Select } from "@/components/select";
 import { startTransition, useActionState, useEffect, useOptimistic, useRef, useState, useTransition, type FormEvent } from "react";
 import { addMembers, removeMember, renameMember, setMemberRole } from "@/app/actions";
 import { Avatar, dangerBtn, ghostBtn, inputCls, pillCls, primaryBtn } from "@/components/ui";
@@ -81,16 +82,16 @@ function MemberRow({ member, used, canEdit, isMe }: { member: Member; used: numb
           </div>
           <span className="hidden text-xs text-slate-400 sm:inline">{used > 0 ? `${used} ทริป` : "ยังไม่มีทริป"}</span>
           {canEdit && member.linked ? (
-            <select
+            <Select
               value={role}
-              onChange={(e) => changeRole(e.target.value as Role)}
+              onChange={(v) => changeRole(v as Role)}
               disabled={pending}
               aria-label={`สิทธิ์ของ ${member.name}`}
               title={ROLES.find((r) => r.id === role)?.hint}
-              className={`${pillCls} ${ROLE_PILL[role]} cursor-pointer border-0 py-1 outline-none`}
-            >
-              {ROLES.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
-            </select>
+              options={ROLES.map((r) => ({ value: r.id, label: r.label }))}
+              align="right"
+              buttonClassName={`${pillCls} ${ROLE_PILL[role]} cursor-pointer py-1 outline-none focus-visible:ring-2 focus-visible:ring-sky-500/40`}
+            />
           ) : member.linked && rolePill}
           {canEdit && (
             <>
