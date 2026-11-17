@@ -93,8 +93,8 @@ function CopyButton({ text, label }: { text: () => string; label: string }) {
   );
 }
 
-/** The invite code (and link) admins hand out; resetting it stops the old one working. */
-export function BoardCode({ code }: { code: string }) {
+/** The invite code (and link) anyone on the board can hand out; only admins can reset it (the old one stops working). */
+export function BoardCode({ code, canReset }: { code: string; canReset: boolean }) {
   const [pending, start] = useTransition();
   return (
     <div>
@@ -104,18 +104,20 @@ export function BoardCode({ code }: { code: string }) {
         <CopyButton text={() => code} label="คัดลอกรหัส" />
         <CopyButton text={() => `${window.location.origin}/join/${code}`} label="คัดลอกลิงก์เชิญ" />
       </div>
-      <button
-        type="button"
-        disabled={pending}
-        onClick={() => {
-          if (confirm("เปลี่ยนรหัสบอร์ด?\nรหัสและลิงก์เดิมจะใช้เข้าร่วมไม่ได้อีก (คนที่อยู่ในบอร์ดแล้วไม่ได้รับผลกระทบ)")) {
-            start(() => resetBoardCode());
-          }
-        }}
-        className="mt-2 text-xs font-medium text-slate-500 underline-offset-2 hover:text-rose-600 hover:underline"
-      >
-        {pending ? "กำลังเปลี่ยนรหัส…" : "เปลี่ยนรหัสใหม่"}
-      </button>
+      {canReset && (
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => {
+            if (confirm("เปลี่ยนรหัสบอร์ด?\nรหัสและลิงก์เดิมจะใช้เข้าร่วมไม่ได้อีก (คนที่อยู่ในบอร์ดแล้วไม่ได้รับผลกระทบ)")) {
+              start(() => resetBoardCode());
+            }
+          }}
+          className="mt-2 text-xs font-medium text-slate-500 underline-offset-2 hover:text-rose-600 hover:underline"
+        >
+          {pending ? "กำลังเปลี่ยนรหัส…" : "เปลี่ยนรหัสใหม่"}
+        </button>
+      )}
     </div>
   );
 }

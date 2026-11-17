@@ -129,7 +129,7 @@ export function ExpenseDialog({
 
           {choices.length === 0 ? (
             <p className="rounded-2xl border border-dashed border-black/10 px-4 py-3 text-sm text-slate-500">
-              ยังไม่มีรายชื่อแก๊ง — เพิ่มรายชื่อในหน้าตั้งค่าก่อนนะ
+              ยังไม่มีรายชื่อสมาขิก — เพิ่มรายชื่อในหน้าตั้งค่าก่อนนะ
             </p>
           ) : (
             <>

@@ -195,7 +195,7 @@ export function TripDialog({
           <div className="min-w-0 space-y-4">
             {members.length === 0 ? (
               <p className="rounded-2xl border border-dashed border-black/10 px-4 py-3 text-sm text-slate-500">
-                ยังไม่มีรายชื่อแก๊ง —{" "}
+                ยังไม่มีรายชื่อสมาขิก —{" "}
                 <Link href="/settings" className="font-medium text-sky-700 underline underline-offset-2">
                   เพิ่มรายชื่อในหน้าตั้งค่า
                 </Link>{" "}
