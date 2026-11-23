@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import * as store from "@/lib/db";
 import { BOARD_NAME_MAX, MEMBER_NAME_MAX } from "@/lib/trips";
-import { BOARD_COOKIE, requireAuth, requireBoardAdmin } from "@/lib/viewer";
+import { BOARD_COOKIE, requireAuth, requireBoardAdmin, writeBlocked } from "@/lib/viewer";
 
 export type FormState = { error?: string; at?: number } | null;
 
@@ -50,6 +50,8 @@ export async function joinBoard(_prev: FormState, form: FormData): Promise<FormS
   const code = store.normalizeBoardCode(String(form.get("code") ?? ""));
   const board = code ? store.boardByCode(code) : undefined;
   if (!board) return { error: "รหัสบอร์ดนี้ใช้ไม่ได้แล้ว — ขอรหัสใหม่จากแอดมิน", at: Date.now() };
+  const blocked = writeBlocked(viewer, board.id);
+  if (blocked && !store.boardsForUser(viewer.userId).some((b) => b.id === board.id)) return { error: blocked, at: Date.now() };
 
   if (!store.boardsForUser(viewer.userId).some((b) => b.id === board.id)) {
     const role = viewer.isSystemAdmin ? "admin" : "member";
@@ -88,7 +90,9 @@ export async function switchBoard(id: number) {
 }
 
 export async function renameBoard(rawName: string): Promise<string | null> {
-  const { board } = await requireBoardAdmin();
+  const { board, viewer } = await requireBoardAdmin();
+  const blocked = writeBlocked(viewer, board.id);
+  if (blocked) return blocked;
   const name = cleanName(rawName);
   if (!name) return "ชื่อบอร์ดห้ามว่าง";
   if (name.length > BOARD_NAME_MAX) return `ชื่อบอร์ดยาวเกิน ${BOARD_NAME_MAX} ตัวอักษร`;
@@ -99,7 +103,8 @@ export async function renameBoard(rawName: string): Promise<string | null> {
 
 /** New code: anyone holding the old code / link can't join any more (people already in stay). */
 export async function resetBoardCode() {
-  const { board } = await requireBoardAdmin();
+  const { board, viewer } = await requireBoardAdmin();
+  if (writeBlocked(viewer, board.id)) return;
   store.resetBoardCode(board.id);
   revalidatePath("/settings");
 }

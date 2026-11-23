@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getAuth } from "@/lib/auth";
-import { requireBoard, requireBoardAdmin } from "@/lib/viewer";
+import { requireBoard, requireBoardAdmin, writeBlocked } from "@/lib/viewer";
 import * as store from "@/lib/db";
 import type { TripInput } from "@/lib/db";
 import { AMOUNT_MAX, EXPENSE_TITLE_MAX, parseAmount } from "@/lib/expenses";
@@ -88,7 +88,9 @@ function parseTrip(form: FormData, boardId: number): TripInput | string {
 }
 
 export async function saveTrip(_prev: TripFormState, form: FormData): Promise<TripFormState> {
-  const { board } = await requireBoard();
+  const { board, viewer } = await requireBoard();
+  const blocked = writeBlocked(viewer, board.id);
+  if (blocked) return { ok: false, error: blocked };
   const input = parseTrip(form, board.id);
   if (typeof input === "string") return { ok: false, error: input };
 
@@ -105,7 +107,8 @@ export async function saveTrip(_prev: TripFormState, form: FormData): Promise<Tr
 }
 
 export async function removeTrip(id: number) {
-  const { board } = await requireBoard();
+  const { board, viewer } = await requireBoard();
+  if (writeBlocked(viewer, board.id)) return;
   if (!store.getTrip(id, board.id)) return;
   store.deleteTrip(id);
   revalidatePath("/");
@@ -121,7 +124,9 @@ function cleanName(raw: unknown) {
 
 /** Admins add names for friends who don't use the app (they can still be on trips / bills). */
 export async function addMembers(_prev: MemberFormState, form: FormData): Promise<MemberFormState> {
-  const { board } = await requireBoardAdmin();
+  const { board, viewer } = await requireBoardAdmin();
+  const blocked = writeBlocked(viewer, board.id);
+  if (blocked) return { ok: false, message: blocked, at: Date.now() };
   // Accept several names at once: "ต้น, แบม" or one per line.
   const names = [...new Set(String(form.get("names") ?? "").split(/[,\n]/).map(cleanName).filter(Boolean))];
   if (names.length === 0) return { ok: false, message: "ใส่ชื่ออย่างน้อย 1 ชื่อ", at: Date.now() };
@@ -139,7 +144,9 @@ export async function addMembers(_prev: MemberFormState, form: FormData): Promis
 }
 
 export async function setMemberRole(id: number, role: string): Promise<string | null> {
-  const { board } = await requireBoardAdmin();
+  const { board, viewer } = await requireBoardAdmin();
+  const blocked = writeBlocked(viewer, board.id);
+  if (blocked) return blocked;
   if (!isRole(role)) return "สิทธิ์ไม่ถูกต้อง";
   const m = store.getMember(id, board.id);
   if (!m) return "ไม่พบรายชื่อนี้ — ลองรีเฟรชหน้า";
@@ -152,7 +159,9 @@ export async function setMemberRole(id: number, role: string): Promise<string | 
 
 /** Admins can rename anyone; everyone can change their own nickname. */
 export async function renameMember(id: number, rawName: string): Promise<string | null> {
-  const { board, me } = await requireBoard();
+  const { board, me, viewer } = await requireBoard();
+  const blocked = writeBlocked(viewer, board.id);
+  if (blocked) return blocked;
   if (id !== me.id && me.role !== "admin") return "แก้ได้เฉพาะชื่อของตัวเอง";
   if (!store.getMember(id, board.id)) return "ไม่พบรายชื่อนี้ — ลองรีเฟรชหน้า";
   const name = cleanName(rawName);
@@ -167,7 +176,8 @@ export async function renameMember(id: number, rawName: string): Promise<string 
 
 /** Removing a signed-in person takes them off the board (they'd need the code to come back). */
 export async function removeMember(id: number) {
-  const { board, me } = await requireBoardAdmin();
+  const { board, me, viewer } = await requireBoardAdmin();
+  if (writeBlocked(viewer, board.id)) return;
   if (id === me.id) throw new Error("Can't remove yourself");
   if (!store.getMember(id, board.id)) return;
   store.deleteMember(id);
@@ -191,7 +201,9 @@ function knownMembers(boardId: number, ids: unknown[]) {
 }
 
 export async function saveExpense(_prev: ExpenseFormState, form: FormData): Promise<ExpenseFormState> {
-  const { board } = await requireBoard();
+  const { board, viewer } = await requireBoard();
+  const blocked = writeBlocked(viewer, board.id, "expenses");
+  if (blocked) return { ok: false, error: blocked };
   const tripId = Number(form.get("trip_id"));
   if (!store.getTrip(tripId, board.id)) return { ok: false, error: "ไม่พบทริปนี้ — อาจถูกลบไปแล้ว" };
 
@@ -224,7 +236,8 @@ export async function saveExpense(_prev: ExpenseFormState, form: FormData): Prom
 
 /** Tick / untick people straight from the table. */
 export async function setExpenseShares(id: number, memberIds: number[]) {
-  const { board } = await requireBoard();
+  const { board, viewer } = await requireBoard();
+  if (writeBlocked(viewer, board.id, "expenses")) return;
   const e = store.getExpense(id);
   if (!e || !store.getTrip(e.trip_id, board.id)) return;
   const ids = knownMembers(board.id, memberIds);
@@ -234,7 +247,8 @@ export async function setExpenseShares(id: number, memberIds: number[]) {
 }
 
 export async function removeExpense(id: number) {
-  const { board } = await requireBoard();
+  const { board, viewer } = await requireBoard();
+  if (writeBlocked(viewer, board.id, "expenses")) return;
   const e = store.getExpense(id);
   if (!e || !store.getTrip(e.trip_id, board.id)) return;
   store.deleteExpense(id);
@@ -242,7 +256,8 @@ export async function removeExpense(id: number) {
 }
 
 export async function setSettled(tripId: number, memberId: number, settled: boolean) {
-  const { board } = await requireBoard();
+  const { board, viewer } = await requireBoard();
+  if (writeBlocked(viewer, board.id, "expenses")) return;
   if (!store.getTrip(tripId, board.id) || knownMembers(board.id, [memberId]).length === 0) return;
   store.setSettled(tripId, memberId, settled);
   revalidatePath(expensesPath(tripId));

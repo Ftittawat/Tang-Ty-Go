@@ -69,13 +69,12 @@ export default async function SettingsPage() {
               title={board.name}
               subtitle={isAdmin ? "คุณเป็นแอดมินของบอร์ดนี้" : "บอร์ดที่เปิดอยู่"}
             />
-            {isAdmin && (
-              <div className="space-y-5">
-                <BoardNameForm key={board.name} name={board.name} />
-                <BoardCode code={board.code} />
-              </div>
-            )}
-            <div className={`flex flex-wrap items-center gap-2 ${isAdmin ? "mt-5 border-t border-black/6 pt-5" : ""}`}>
+            <div className="space-y-5">
+              {isAdmin && <BoardNameForm key={board.name} name={board.name} />}
+              {/* Everyone can share the code / invite link; only admins can reset it. */}
+              <BoardCode code={board.code} canReset={isAdmin} />
+            </div>
+            <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-black/6 pt-5">
               {others.map((b) => (
                 <SwitchBoardButton key={b.id} id={b.id}>
                   สลับไป “{b.name}” <ChevronRightIcon className="size-4" />
@@ -85,8 +84,8 @@ export default async function SettingsPage() {
                 {viewer.isSystemAdmin ? "เข้าร่วม / สร้างบอร์ดอื่น" : "เข้าร่วมบอร์ดอื่น"}
               </Link>
               {viewer.isSystemAdmin && (
-                <Link href="/admin/boards" className={ghostBtn}>
-                  บอร์ดทั้งหมด
+                <Link href="/back-office" className={ghostBtn}>
+                  หลังบ้าน
                 </Link>
               )}
             </div>
@@ -96,10 +95,10 @@ export default async function SettingsPage() {
             <SectionTitle
               icon={<PeopleIcon className="size-5" />}
               tint="bg-sky-600"
-              title="รายชื่อแก๊ง"
+              title="รายชื่อสมาขิก"
               subtitle={
                 isAdmin
-                  ? "เพื่อนที่เข้าร่วมด้วยรหัสจะขึ้นที่นี่เอง — เพิ่มชื่อเองได้สำหรับคนที่ไม่ได้ใช้แอป"
+                  ? "เพื่อนที่เข้าร่วมด้วยรหัสจะขึ้นที่นี่เอง"
                   : "เฉพาะแอดมินที่เพิ่ม / แก้ไขรายชื่อคนอื่นได้"
               }
             />

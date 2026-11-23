@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { GoogleSignIn } from "@/components/google-sign-in";
 import { Logo } from "@/components/ui";
+import { BANNED, SIGNUP_CLOSED } from "@/lib/auth";
 import { getViewer } from "@/lib/viewer";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +16,11 @@ export default async function LoginPage(props: PageProps<"/login">) {
   const next = safeNext(params.next);
   if (await getViewer()) redirect(next);
   const code = params.error;
-  const error = typeof code === "string" ? "เข้าสู่ระบบไม่สำเร็จ ลองใหม่อีกครั้ง" : null;
+  const error =
+    code === SIGNUP_CLOSED ? "ตอนนี้ปิดรับสมาชิกใหม่ชั่วคราว ติดต่อเจ้าของระบบ"
+    : code === BANNED ? "บัญชีนี้ถูกระงับการใช้งาน ติดต่อเจ้าของระบบ"
+    : typeof code === "string" ? "เข้าสู่ระบบไม่สำเร็จ ลองใหม่อีกครั้ง"
+    : null;
 
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-linear-to-b from-[#bcd8ff] via-[#eef2f8] to-[#c6efd6] px-4">

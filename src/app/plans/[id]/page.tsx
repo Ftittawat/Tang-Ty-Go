@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { FeatureOff } from "@/components/feature-off";
 import { PlanEditor } from "@/components/plan-editor";
 import { listTrips } from "@/lib/db";
 import { getItems, getPlan } from "@/lib/plan-store";
-import { boardPage, getBoardContext } from "@/lib/viewer";
+import { boardPage, getBoardContext, getFeatures } from "@/lib/viewer";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,7 @@ export async function generateMetadata(props: PageProps<"/plans/[id]">): Promise
 
 export default async function PlanPage(props: PageProps<"/plans/[id]">) {
   const { board } = await boardPage();
+  if (!(await getFeatures()).plans) return <FeatureOff feature="plans" />;
   const plan = getPlan(Number((await props.params).id), board.id);
   if (!plan) notFound();
   return <PlanEditor plan={plan} items={getItems(plan.id)} trips={listTrips(board.id)} />;

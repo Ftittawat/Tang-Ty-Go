@@ -70,7 +70,7 @@ function DeleteForm({ board }: { board: BoardSummary }) {
   );
 }
 
-/** System admins' list of every board, with open / join and delete. */
+/** The owner's list of every board, with open / join and delete. */
 export function AdminBoards({
   boards, myBoardIds, currentBoardId,
 }: {
@@ -111,6 +111,7 @@ export function AdminBoards({
                 </p>
               </div>
               <div className="flex items-center gap-2">
+                <Link href={`/back-office/boards/${b.id}`} className={`${ghostBtn} ${smallBtn}`}>ตั้งค่า</Link>
                 {mine ? (
                   b.id !== currentBoardId && <SwitchBoardButton id={b.id} className={`${ghostBtn} ${smallBtn}`}>เปิดบอร์ด</SwitchBoardButton>
                 ) : (

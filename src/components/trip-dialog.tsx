@@ -5,6 +5,7 @@ import { startTransition, useActionState, useEffect, useRef, useState, useTransi
 import { removeTrip, saveTrip } from "@/app/actions";
 import { openPlanForTrip } from "@/app/plan-actions";
 import Link from "next/link";
+import { useFeatures } from "@/components/features";
 import { BanknoteIcon, CalendarIcon, ChevronRightIcon, MapIcon, XMarkIcon } from "@/components/icons";
 import { closeBtn, dangerBtn, ghostBtn, inputCls, labelCls, MemberChip, pageWideDialogCls, primaryBtn } from "@/components/ui";
 import { formatBaht } from "@/lib/expenses";
@@ -33,6 +34,7 @@ export function TripDialog({
   const [state, action, pending] = useActionState(saveTrip, null);
   const [deleting, startDelete] = useTransition();
   const [openingPlan, startOpenPlan] = useTransition();
+  const features = useFeatures();
   const [status, setStatus] = useState<Status>(trip?.status ?? defaultStatus);
   const [start, setStart] = useState(trip?.start_date ?? "");
   // Only ever rendered client-side (opened by a click), so reading localStorage here is safe.
@@ -100,7 +102,7 @@ export function TripDialog({
 
         <header className="flex items-center gap-2 border-b border-black/[0.06] px-5 py-3.5">
           <h2 className="text-[17px] font-semibold">{trip ? "แก้ไขทริป" : "เพิ่มทริป / กิจกรรมใหม่"}</h2>
-          {trip && (
+          {trip && features.plans && (
             <button
               type="button"
               disabled={openingPlan}
@@ -112,7 +114,7 @@ export function TripDialog({
               {openingPlan ? "กำลังเปิด…" : trip.plan_id ? "แผนเที่ยว" : "สร้างแผนเที่ยว"}
             </button>
           )}
-          <button type="button" onClick={() => ref.current?.close()} className={`${closeBtn} ${trip ? "" : "ml-auto"}`} aria-label="ปิด">
+          <button type="button" onClick={() => ref.current?.close()} className={`${closeBtn} ${trip && features.plans ? "" : "ml-auto"}`} aria-label="ปิด">
             <XMarkIcon className="size-4" />
           </button>
         </header>
@@ -195,7 +197,7 @@ export function TripDialog({
           <div className="min-w-0 space-y-4">
             {members.length === 0 ? (
               <p className="rounded-2xl border border-dashed border-black/10 px-4 py-3 text-sm text-slate-500">
-                ยังไม่มีรายชื่อแก๊ง —{" "}
+                ยังไม่มีรายชื่อสมาขิก —{" "}
                 <Link href="/settings" className="font-medium text-sky-700 underline underline-offset-2">
                   เพิ่มรายชื่อในหน้าตั้งค่า
                 </Link>{" "}
@@ -232,7 +234,7 @@ export function TripDialog({
               </>
             )}
 
-            {trip && (
+            {trip && features.expenses && (
               <Link
                 href={`/trips/${trip.id}/expenses`}
                 className="flex items-center gap-3 rounded-2xl bg-slate-100/70 px-3.5 py-3 text-sm transition hover:bg-slate-100"

@@ -108,6 +108,24 @@ export function db(): Database.Database {
       member_id INTEGER NOT NULL REFERENCES members(id) ON DELETE CASCADE,
       PRIMARY KEY (trip_id, member_id)
     );
+    -- Back office: only switches that differ from the defaults in lib/features.ts are stored.
+    CREATE TABLE IF NOT EXISTS feature_flags (
+      key        TEXT PRIMARY KEY,
+      enabled    INTEGER NOT NULL,
+      updated_at TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE TABLE IF NOT EXISTS board_features (
+      board_id INTEGER NOT NULL REFERENCES boards(id) ON DELETE CASCADE,
+      key      TEXT NOT NULL,
+      enabled  INTEGER NOT NULL,
+      PRIMARY KEY (board_id, key)
+    );
+    -- Better Auth's "user" table is created later (instrumentation), so no foreign key here.
+    CREATE TABLE IF NOT EXISTS user_bans (
+      user_id    TEXT PRIMARY KEY,
+      reason     TEXT,
+      created_at TEXT NOT NULL DEFAULT (${NOW})
+    );
   `);
   migrateFreeTextPeople(d);
   dropBadminton(d);
