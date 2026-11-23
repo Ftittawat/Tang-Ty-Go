@@ -39,7 +39,9 @@ export default async function BackOfficePage() {
         <div className="flex gap-3 rounded-2xl bg-[#ff9500]/12 p-4 text-sm text-[#c93400]">
           <ExclamationIcon className="mt-0.5 size-4 shrink-0" />
           <p>
-            <span className="font-semibold">เปิดโหมดปิดปรับปรุงอยู่</span> ทุกคนยกเว้นคุณแก้ไขอะไรไม่ได้{" "}
+            <span className="font-semibold">เปิดโหมดปิดปรับปรุงอยู่</span> ทุกคนยกเว้นคุณเห็นหน้าปิดปรับปรุงเต็มจอ{" "}
+            <Link href="/maintenance" className="font-medium underline">ดูหน้านั้น</Link>
+            {" · "}
             <Link href="/back-office/features" className="font-medium underline">ปิดได้ที่หน้าฟีเจอร์</Link>
           </p>
         </div>

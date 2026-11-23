@@ -1,8 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Noto_Sans_Thai } from "next/font/google";
+import Link from "next/link";
 import { FeaturesProvider } from "@/components/features";
 import { ExclamationIcon } from "@/components/icons";
-import { MAINTENANCE_MESSAGE } from "@/lib/features";
 import { getFeatures, getViewer } from "@/lib/viewer";
 import "./globals.css";
 
@@ -32,11 +32,12 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="th" className={`${inter.variable} ${thai.variable} h-full antialiased`}>
       <body className="min-h-full font-sans">
-        {features.maintenance && (
-          <div role="status" className="flex items-center justify-center gap-2 bg-[#ff9500] px-4 py-2 text-center text-sm font-medium text-white">
+        {/* Everyone else gets the full-screen /maintenance page instead (proxy.ts). */}
+        {features.maintenance && viewer?.isSystemAdmin && (
+          <div role="status" className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 bg-[#ff9500] px-4 py-2 text-center text-sm font-medium text-white">
             <ExclamationIcon className="size-4 shrink-0" />
-            {MAINTENANCE_MESSAGE}
-            {viewer?.isSystemAdmin && <span className="font-normal opacity-90">(คุณยังแก้ไขได้ในฐานะเจ้าของระบบ)</span>}
+            ปิดปรับปรุงอยู่ คนอื่นใช้งานไม่ได้ คุณยังใช้งานได้ในฐานะเจ้าของระบบ
+            <Link href="/maintenance" className="font-normal underline opacity-90">ดูหน้าที่คนอื่นเห็น</Link>
           </div>
         )}
         <FeaturesProvider value={features}>{children}</FeaturesProvider>

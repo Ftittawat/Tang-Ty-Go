@@ -14,7 +14,7 @@ type FeatureDef = { label: string; description: string; default: boolean; scope:
 export const FEATURES = {
   maintenance: {
     label: "โหมดปิดปรับปรุง",
-    description: "ทุกคนดูได้อย่างเดียว แก้ไขอะไรไม่ได้ (ยกเว้นเจ้าของระบบ) และมีแถบแจ้งบนทุกหน้า",
+    description: "ทุกคนยกเว้นเจ้าของระบบจะเห็นหน้าปิดปรับปรุงเต็มจอ และใช้งานอะไรไม่ได้เลย",
     default: false,
     scope: "global",
   },
@@ -56,5 +56,5 @@ export const isBoardFeatureKey = (v: unknown): v is BoardFeatureKey => isFeature
 
 export const DEFAULT_FEATURES = Object.fromEntries(FEATURE_KEYS.map((k) => [k, FEATURES[k].default])) as FeatureState;
 
-export const MAINTENANCE_MESSAGE = "ระบบปิดปรับปรุงชั่วคราว ตอนนี้ดูได้อย่างเดียว";
+export const MAINTENANCE_MESSAGE = "ระบบปิดปรับปรุงชั่วคราว ลองใหม่อีกครั้งภายหลัง";
 export const featureOffMessage = (key: FeatureKey) => `“${FEATURES[key].label}” ถูกปิดใช้งานอยู่`;
