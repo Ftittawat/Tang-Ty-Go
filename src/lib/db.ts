@@ -120,6 +120,24 @@ export function db(): Database.Database {
       enabled  INTEGER NOT NULL,
       PRIMARY KEY (board_id, key)
     );
+    -- Back office: notices every signed-in user sees at the top of the app.
+    CREATE TABLE IF NOT EXISTS announcements (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      title       TEXT NOT NULL,
+      body        TEXT,
+      tone        TEXT NOT NULL DEFAULT 'info',
+      dismissible INTEGER NOT NULL DEFAULT 1,
+      active      INTEGER NOT NULL DEFAULT 1,
+      starts_at   TEXT,
+      ends_at     TEXT,
+      created_at  TEXT NOT NULL DEFAULT (${NOW}),
+      updated_at  TEXT NOT NULL DEFAULT (${NOW})
+    );
+    CREATE TABLE IF NOT EXISTS announcement_dismissals (
+      announcement_id INTEGER NOT NULL REFERENCES announcements(id) ON DELETE CASCADE,
+      user_id         TEXT NOT NULL,
+      PRIMARY KEY (announcement_id, user_id)
+    );
     -- Better Auth's "user" table is created later (instrumentation), so no foreign key here.
     CREATE TABLE IF NOT EXISTS user_bans (
       user_id    TEXT PRIMARY KEY,

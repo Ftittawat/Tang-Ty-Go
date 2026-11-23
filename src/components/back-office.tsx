@@ -17,6 +17,7 @@ const smallBtn = "px-2.5 py-1.5 text-xs";
 const TABS = [
   { href: "/back-office", label: "ภาพรวม", match: (p: string) => p === "/back-office" },
   { href: "/back-office/features", label: "ฟีเจอร์", match: (p: string) => p.startsWith("/back-office/features") },
+  { href: "/back-office/announcements", label: "ประกาศ", match: (p: string) => p.startsWith("/back-office/announcements") },
   { href: "/back-office/users", label: "ผู้ใช้", match: (p: string) => p.startsWith("/back-office/users") },
   { href: "/back-office/boards", label: "บอร์ด", match: (p: string) => p.startsWith("/back-office/boards") },
 ];
@@ -49,7 +50,7 @@ export function BackOfficeNav() {
 // ---------- switches ----------
 
 /** iOS-style on / off switch. */
-function Switch({ on, onChange, disabled, label }: { on: boolean; onChange: (on: boolean) => void; disabled?: boolean; label: string }) {
+export function Switch({ on, onChange, disabled, label }: { on: boolean; onChange: (on: boolean) => void; disabled?: boolean; label: string }) {
   return (
     <button
       type="button"

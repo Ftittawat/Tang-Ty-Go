@@ -1,3 +1,4 @@
+import { isTone, type Announcement, type AnnouncementAdmin, type AnnouncementInput } from "@/lib/announcements";
 import { db } from "@/lib/db";
 import {
   DEFAULT_FEATURES, isBoardFeatureKey, isFeatureKey,
@@ -154,6 +155,7 @@ export function deleteUser(id: string) {
   d.transaction(() => {
     d.prepare("UPDATE members SET user_id = NULL, role = 'member' WHERE user_id = ?").run(id);
     d.prepare("DELETE FROM user_bans WHERE user_id = ?").run(id);
+    d.prepare("DELETE FROM announcement_dismissals WHERE user_id = ?").run(id);
     d.prepare(`DELETE FROM "user" WHERE id = ?`).run(id);
   })();
 }
@@ -172,4 +174,97 @@ export function boardMembersWithEmail(boardId: number): BoardMemberRow[] {
     `)
     .all(boardId)
     .sort((a, b) => (a as BoardMemberRow).name.localeCompare((b as BoardMemberRow).name, "th")) as BoardMemberRow[];
+}
+
+// ---------- announcements ----------
+
+/** ISO strings in UTC compare as text, the same way they're stored. */
+const NOW_ISO = "strftime('%Y-%m-%dT%H:%M:%fZ', 'now')";
+
+type AnnouncementRow = Omit<AnnouncementAdmin, "dismissible" | "active" | "tone"> & { dismissible: number; active: number; tone: string };
+
+const toAnnouncementAdmin = (r: AnnouncementRow): AnnouncementAdmin => ({
+  ...r,
+  tone: isTone(r.tone) ? r.tone : "info",
+  dismissible: !!r.dismissible,
+  active: !!r.active,
+});
+
+export function listAnnouncements(): AnnouncementAdmin[] {
+  return (db()
+    .prepare(`
+      SELECT a.*, (SELECT COUNT(*) FROM announcement_dismissals WHERE announcement_id = a.id) AS dismissed_count
+      FROM announcements a ORDER BY a.created_at DESC, a.id DESC
+    `)
+    .all() as AnnouncementRow[]).map(toAnnouncementAdmin);
+}
+
+/** Live now and not hidden by this user; newest first. */
+export function announcementsFor(userId: string): Announcement[] {
+  return (db()
+    .prepare(`
+      SELECT a.id, a.title, a.body, a.tone, a.dismissible
+      FROM announcements a
+      WHERE a.active = 1
+        AND (a.starts_at IS NULL OR a.starts_at <= ${NOW_ISO})
+        AND (a.ends_at IS NULL OR a.ends_at > ${NOW_ISO})
+        AND NOT (a.dismissible = 1 AND EXISTS (
+          SELECT 1 FROM announcement_dismissals d WHERE d.announcement_id = a.id AND d.user_id = ?
+        ))
+      ORDER BY a.created_at DESC, a.id DESC
+    `)
+    .all(userId) as { id: number; title: string; body: string | null; tone: string; dismissible: number }[])
+    .map((r) => ({ ...r, tone: isTone(r.tone) ? r.tone : "info", dismissible: !!r.dismissible }));
+}
+
+const announcementParams = (a: AnnouncementInput) => ({
+  title: a.title,
+  body: a.body,
+  tone: a.tone,
+  dismissible: a.dismissible ? 1 : 0,
+  active: a.active ? 1 : 0,
+  starts_at: a.starts_at,
+  ends_at: a.ends_at,
+});
+
+export function createAnnouncement(a: AnnouncementInput) {
+  return Number(db()
+    .prepare(`INSERT INTO announcements (title, body, tone, dismissible, active, starts_at, ends_at)
+              VALUES (@title, @body, @tone, @dismissible, @active, @starts_at, @ends_at)`)
+    .run(announcementParams(a)).lastInsertRowid);
+}
+
+export function updateAnnouncement(id: number, a: AnnouncementInput) {
+  return db()
+    .prepare(`UPDATE announcements SET title = @title, body = @body, tone = @tone, dismissible = @dismissible,
+                active = @active, starts_at = @starts_at, ends_at = @ends_at, updated_at = ${NOW_ISO} WHERE id = @id`)
+    .run({ ...announcementParams(a), id }).changes > 0;
+}
+
+export function setAnnouncementActive(id: number, active: boolean) {
+  db().prepare(`UPDATE announcements SET active = ?, updated_at = ${NOW_ISO} WHERE id = ?`).run(active ? 1 : 0, id);
+}
+
+/** Hidden ones come back for everyone (e.g. after the text changed a lot). */
+export function resetDismissals(id: number) {
+  db().prepare("DELETE FROM announcement_dismissals WHERE announcement_id = ?").run(id);
+}
+
+export function deleteAnnouncement(id: number) {
+  db().prepare("DELETE FROM announcements WHERE id = ?").run(id);
+}
+
+/** Only dismissible, existing announcements can be hidden. */
+export function dismissAnnouncement(id: number, userId: string) {
+  db()
+    .prepare(`INSERT OR IGNORE INTO announcement_dismissals (announcement_id, user_id)
+              SELECT id, ? FROM announcements WHERE id = ? AND dismissible = 1`)
+    .run(userId, id);
+}
+
+export function liveAnnouncementCount() {
+  return (db()
+    .prepare(`SELECT COUNT(*) AS n FROM announcements WHERE active = 1
+              AND (starts_at IS NULL OR starts_at <= ${NOW_ISO}) AND (ends_at IS NULL OR ends_at > ${NOW_ISO})`)
+    .get() as { n: number }).n;
 }

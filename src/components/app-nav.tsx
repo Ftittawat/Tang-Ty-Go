@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { AnnouncementList } from "@/components/announcements";
 import { useFeatures } from "@/components/features";
 import { BoardIcon, ChevronLeftIcon, GearIcon, MapIcon } from "@/components/icons";
 import { iconBtn, Logo, pageCls } from "@/components/ui";
@@ -112,7 +113,7 @@ export function AppNav() {
 }
 
 /**
- * Sticky frosted top bar used by every page. Same width everywhere so the logo, tabs and
+ * Sticky frosted top bar used by every page, with the owner's announcements under it. Same width everywhere so the logo, tabs and
  * buttons stay put when switching pages. `children` go between the tabs and the gear.
  */
 export function AppHeader({
@@ -124,20 +125,23 @@ export function AppHeader({
   settings?: boolean;
 }) {
   return (
-    <header className="sticky top-0 z-20 border-b border-black/[0.06] bg-[#f5f5f7]/75 backdrop-blur-xl backdrop-saturate-150">
-      <div className={`${pageCls} flex flex-wrap items-center gap-x-2 gap-y-3 py-3`}>
-        <AppNav />
-        <div className="ml-auto flex items-center gap-2">
-          {children}
-          {settings && (
-            <Link href="/settings" className={iconBtn} title="ตั้งค่า" aria-label="ตั้งค่า">
-              <GearIcon className="size-[18px]" />
-            </Link>
-          )}
+    <>
+      <header className="sticky top-0 z-20 border-b border-black/[0.06] bg-[#f5f5f7]/75 backdrop-blur-xl backdrop-saturate-150">
+        <div className={`${pageCls} flex flex-wrap items-center gap-x-2 gap-y-3 py-3`}>
+          <AppNav />
+          <div className="ml-auto flex items-center gap-2">
+            {children}
+            {settings && (
+              <Link href="/settings" className={iconBtn} title="ตั้งค่า" aria-label="ตั้งค่า">
+                <GearIcon className="size-[18px]" />
+              </Link>
+            )}
+          </div>
         </div>
-      </div>
-      {below}
-    </header>
+        {below}
+      </header>
+      <AnnouncementList />
+    </>
   );
 }
 

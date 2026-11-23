@@ -3,7 +3,7 @@ import Link from "next/link";
 import { PageTitle } from "@/components/app-nav";
 import { ChevronRightIcon, ExclamationIcon } from "@/components/icons";
 import { pillCls, surfaceCls } from "@/components/ui";
-import { globalFeatures, overrideCounts, systemStats } from "@/lib/back-office-store";
+import { globalFeatures, liveAnnouncementCount, overrideCounts, systemStats } from "@/lib/back-office-store";
 import { FEATURE_KEYS, FEATURES } from "@/lib/features";
 import { ownerPage } from "@/lib/viewer";
 
@@ -54,6 +54,7 @@ export default async function BackOfficePage() {
         <Stat label="ทริป" value={stats.trips} />
         <Stat label="แผนเที่ยว" value={stats.plans} />
         <Stat label="รายการค่าใช้จ่าย" value={stats.expenses} />
+        <Stat label="ประกาศที่แสดงอยู่" value={liveAnnouncementCount()} href="/back-office/announcements" />
       </div>
 
       <section className={`${surfaceCls} p-5`}>

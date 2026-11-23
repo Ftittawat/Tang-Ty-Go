@@ -1,8 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Noto_Sans_Thai } from "next/font/google";
 import Link from "next/link";
+import { AnnouncementsProvider } from "@/components/announcements";
 import { FeaturesProvider } from "@/components/features";
 import { ExclamationIcon } from "@/components/icons";
+import { announcementsFor } from "@/lib/back-office-store";
 import { getFeatures, getViewer } from "@/lib/viewer";
 import "./globals.css";
 
@@ -40,7 +42,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             <Link href="/maintenance" className="font-normal underline opacity-90">ดูหน้าที่คนอื่นเห็น</Link>
           </div>
         )}
-        <FeaturesProvider value={features}>{children}</FeaturesProvider>
+        <FeaturesProvider value={features}>
+          <AnnouncementsProvider initial={viewer ? announcementsFor(viewer.userId) : null}>{children}</AnnouncementsProvider>
+        </FeaturesProvider>
       </body>
     </html>
   );

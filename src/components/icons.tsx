@@ -167,3 +167,17 @@ export const LogoutIcon = (p: IconProps) => (
     <path d="M10 8l-4 4 4 4M6 12h9.5" />
   </Icon>
 );
+
+export const MegaphoneIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M3.5 10.5v3a1.5 1.5 0 0 0 1.5 1.5h2l6.5 4V5L7 9H5a1.5 1.5 0 0 0-1.5 1.5Z" />
+    <path d="M17 9a4 4 0 0 1 0 6M7.5 15l1 4.5" />
+  </Icon>
+);
+
+export const SparklesIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M10 3.5 11.6 8a3 3 0 0 0 1.9 1.9L18 11.5 13.5 13a3 3 0 0 0-1.9 1.9L10 19.5 8.4 15A3 3 0 0 0 6.5 13L2 11.5 6.5 10A3 3 0 0 0 8.4 8L10 3.5Z" />
+    <path d="M18.5 3v3M17 4.5h3M18.5 17v3M17 18.5h3" />
+  </Icon>
+);

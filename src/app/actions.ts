@@ -4,7 +4,8 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getAuth } from "@/lib/auth";
-import { requireBoard, requireBoardAdmin, writeBlocked } from "@/lib/viewer";
+import { requireAuth, requireBoard, requireBoardAdmin, writeBlocked } from "@/lib/viewer";
+import { dismissAnnouncement as hideAnnouncement } from "@/lib/back-office-store";
 import * as store from "@/lib/db";
 import type { TripInput } from "@/lib/db";
 import { AMOUNT_MAX, EXPENSE_TITLE_MAX, parseAmount } from "@/lib/expenses";
@@ -13,6 +14,12 @@ import { isCategory, isRole, isStatus, MEMBER_NAME_MAX } from "@/lib/trips";
 export async function logout() {
   await getAuth().api.signOut({ headers: await headers() });
   redirect("/login");
+}
+
+/** ✕ on an announcement: hidden for this user on every device. */
+export async function dismissAnnouncement(id: number) {
+  const viewer = await requireAuth();
+  hideAnnouncement(Number(id), viewer.userId);
 }
 
 export type TripFormState = { ok: boolean; error?: string; at?: number } | null;
