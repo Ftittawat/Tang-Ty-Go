@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { logout } from "@/app/actions";
-import { MaintenanceAnimation } from "@/components/maintenance-animation";
-import { ghostBtn, Logo, primaryBtn } from "@/components/ui";
+import { ghostBtn, primaryBtn } from "@/components/ui";
 import { globalFeatures } from "@/lib/back-office-store";
 import { getViewer } from "@/lib/viewer";
 
@@ -24,12 +23,12 @@ export default async function MaintenancePage() {
       <span aria-hidden className="pointer-events-none absolute -bottom-40 -right-24 size-112 rounded-full bg-[#ff9500]/20 blur-3xl" />
 
       <div className="relative w-full max-w-2xl text-center">
-        <Logo className="mx-auto size-14 shadow-lift" />
-        <MaintenanceAnimation className="mx-auto -my-4 w-full max-w-xl sm:-my-8" />
-        <h1 className="text-2xl font-bold sm:text-[32px]">ปิดปรับปรุงระบบชั่วคราว</h1>
+        {/* Still from "Maintenance web" by Creanimasi Studio (LottieFiles, Lottie Simple License). Public file, so it loads during maintenance too. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/maintenance.svg" alt="" width={1511} height={760} className="mx-auto h-auto w-full max-w-lg" />
+        <h1 className="mt-4 text-2xl font-bold sm:text-[32px]">ปิดปรับปรุงระบบชั่วคราว</h1>
         <p className="mx-auto mt-2 max-w-md text-[15px] leading-relaxed text-slate-600">
-          ตอนนี้กำลังปรับปรุง Tang-Ty Go ให้ดีขึ้น ข้อมูลทริปและบิลทั้งหมดยังอยู่ครบ
-          อีกสักพักกลับมาใช้งานได้ตามปกติ
+          กำลังปรับปรุงระบบให้ดีขึ้น ข้อมูลทริปและบิลทั้งหมดยังอยู่ครบ อีกสักพักกลับมาใช้งานได้ตามปกติ
         </p>
         <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
           {/* The proxy decides again: back to the app as soon as maintenance ends. */}
