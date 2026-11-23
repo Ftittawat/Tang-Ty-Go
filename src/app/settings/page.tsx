@@ -84,8 +84,8 @@ export default async function SettingsPage() {
                 {viewer.isSystemAdmin ? "เข้าร่วม / สร้างบอร์ดอื่น" : "เข้าร่วมบอร์ดอื่น"}
               </Link>
               {viewer.isSystemAdmin && (
-                <Link href="/admin/boards" className={ghostBtn}>
-                  บอร์ดทั้งหมด
+                <Link href="/back-office" className={ghostBtn}>
+                  หลังบ้าน
                 </Link>
               )}
             </div>

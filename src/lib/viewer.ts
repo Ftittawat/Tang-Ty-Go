@@ -1,8 +1,10 @@
 import { cache } from "react";
 import { cookies, headers } from "next/headers";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { isSystemAdmin, sessionFromHeaders } from "@/lib/auth";
+import { resolveFeatures } from "@/lib/back-office-store";
 import { boardsForUser, type MyBoard } from "@/lib/db";
+import { featureOffMessage, MAINTENANCE_MESSAGE, type BoardFeatureKey, type FeatureState } from "@/lib/features";
 import type { Board, Role } from "@/lib/trips";
 
 /** Remembers which of the user's boards is open; only trusted after checking membership. */
@@ -13,7 +15,7 @@ export type Viewer = {
   name: string;
   email: string;
   image: string | null;
-  /** In ADMIN_EMAILS: can create boards and see every board. */
+  /** In ADMIN_EMAILS (the owner): can create boards, see every board and open /back-office. */
   isSystemAdmin: boolean;
 };
 
@@ -73,4 +75,36 @@ export async function boardPage() {
   const ctx = await getBoardContext();
   if (ctx) return ctx;
   redirect((await getViewer()) ? "/join" : "/login");
+}
+
+/** Switches in effect for this request: the open board's overrides, else the whole-app ones. */
+export const getFeatures = cache(async (): Promise<FeatureState> => {
+  const ctx = await getBoardContext();
+  return resolveFeatures(ctx?.board.id ?? null);
+});
+
+/**
+ * Why a change can't be made right now, or null. Call in every Server Action that changes data,
+ * after the auth check: maintenance blocks everyone but the owner; a switched-off feature blocks everyone.
+ */
+export function writeBlocked(viewer: Viewer, boardId: number | null, feature?: BoardFeatureKey) {
+  const f = resolveFeatures(boardId);
+  if (f.maintenance && !viewer.isSystemAdmin) return MAINTENANCE_MESSAGE;
+  if (feature && !f[feature]) return featureOffMessage(feature);
+  return null;
+}
+
+/** Back-office Server Actions: the owner (ADMIN_EMAILS) only. */
+export async function requireOwner() {
+  const v = await requireAuth();
+  if (!v.isSystemAdmin) throw new Error("Forbidden");
+  return v;
+}
+
+/** Back-office pages: everyone but the owner gets a plain 404, so the page doesn't seem to exist. */
+export async function ownerPage() {
+  const v = await getViewer();
+  if (!v) redirect("/login");
+  if (!v.isSystemAdmin) notFound();
+  return v;
 }

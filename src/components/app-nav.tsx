@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useFeatures } from "@/components/features";
 import { BoardIcon, ChevronLeftIcon, GearIcon, MapIcon } from "@/components/icons";
 import { iconBtn, Logo, pageCls } from "@/components/ui";
 
-const TABS = [
-  { href: "/", label: "บอร์ด", icon: BoardIcon, match: (p: string) => p === "/" },
-  { href: "/plans", label: "แผนเที่ยว", icon: MapIcon, match: (p: string) => p.startsWith("/plans") },
-];
+const ALL_TABS = [
+  { href: "/", label: "บอร์ด", icon: BoardIcon, match: (p: string) => p === "/", feature: null },
+  { href: "/plans", label: "แผนเที่ยว", icon: MapIcon, match: (p: string) => p.startsWith("/plans"), feature: "plans" },
+] as const;
 
 type Pill = { left: number; width: number };
 
@@ -23,6 +24,8 @@ let lastPill: Pill | null = null;
 /** Logo + section tabs (an iOS-style segmented control with a sliding pill), shared by every page header. */
 export function AppNav() {
   const pathname = usePathname();
+  const features = useFeatures();
+  const TABS = ALL_TABS.filter((t) => !t.feature || features[t.feature]);
   const routeIdx = TABS.findIndex((t) => t.match(pathname));
   // Clicking moves the pill right away; the new page then takes over with the same index.
   const [clicked, setClicked] = useState<{ idx: number; from: string } | null>(null);

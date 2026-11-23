@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { useFeatures } from "@/components/features";
 import {
   BanknoteIcon, CalendarIcon, CalendarPlusIcon, LinkIcon, MapIcon, MapPinIcon, WalletIcon,
 } from "@/components/icons";
@@ -111,7 +112,8 @@ export function TripCard({ trip, names, onOpen, past = false }: { trip: Trip; na
   const people = owner ? [owner, ...others] : others;
   const status = STATUSES.find((s) => s.id === trip.status) ?? STATUSES[0];
   const meter = past ? null : meterOf(trip);
-  const calendarUrl = past ? null : googleCalendarUrl(trip);
+  const features = useFeatures();
+  const calendarUrl = past || !features.calendar_export ? null : googleCalendarUrl(trip);
 
   return (
     <article
@@ -148,12 +150,12 @@ export function TripCard({ trip, names, onOpen, past = false }: { trip: Trip; na
                 <WalletIcon className="size-4 text-slate-400" />฿{trip.budget.toLocaleString("th-TH")}/คน
               </span>
             )}
-            {trip.expense_total > 0 && (
+            {features.expenses && trip.expense_total > 0 && (
               <Link href={`/trips/${trip.id}/expenses`} title="ค่าใช้จ่าย / หารบิล" className={footLink}>
                 <BanknoteIcon className="size-4 text-slate-400" />฿{formatBaht(trip.expense_total)}
               </Link>
             )}
-            {trip.plan_id !== null && (
+            {features.plans && trip.plan_id !== null && (
               <Link href={`/plans/${trip.plan_id}`} title="แผนเที่ยว" className={footLink}>
                 <MapIcon className="size-4 text-slate-400" />แผน
               </Link>

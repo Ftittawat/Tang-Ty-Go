@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { requireBoard } from "@/lib/viewer";
+import { requireBoard, writeBlocked } from "@/lib/viewer";
 import { getTrip } from "@/lib/db";
 import * as store from "@/lib/plan-store";
 import { isActivityType, isTime, isTravelMode, MAX_DAYS, MAX_DURATION_MIN, type PlanItemKind } from "@/lib/plans";
@@ -49,7 +49,9 @@ function parsePlan(form: FormData, boardId: number): store.PlanInput | string {
 }
 
 export async function createPlan(_prev: PlanFormState, form: FormData): Promise<PlanFormState> {
-  const { board } = await requireBoard();
+  const { board, viewer } = await requireBoard();
+  const blocked = writeBlocked(viewer, board.id, "plans");
+  if (blocked) return { ok: false, error: blocked };
   const input = parsePlan(form, board.id);
   if (typeof input === "string") return { ok: false, error: input };
   const id = store.createPlan(board.id, input);
@@ -59,11 +61,12 @@ export async function createPlan(_prev: PlanFormState, form: FormData): Promise<
 
 /** Open the trip's plan, creating one from the trip's dates the first time. */
 export async function openPlanForTrip(tripId: number) {
-  const { board } = await requireBoard();
+  const { board, viewer } = await requireBoard();
   const trip = getTrip(tripId, board.id);
   if (!trip) throw new Error("Trip not found");
   const existing = store.firstPlanForTrip(tripId);
   if (existing) redirect(`/plans/${existing.id}`);
+  if (writeBlocked(viewer, board.id, "plans")) return;
 
   const id = store.createPlan(board.id, {
     title: trip.title,
@@ -77,7 +80,9 @@ export async function openPlanForTrip(tripId: number) {
 }
 
 export async function updatePlan(_prev: PlanFormState, form: FormData): Promise<PlanFormState> {
-  const { board } = await requireBoard();
+  const { board, viewer } = await requireBoard();
+  const blocked = writeBlocked(viewer, board.id, "plans");
+  if (blocked) return { ok: false, error: blocked };
   const id = Number(form.get("id"));
   if (!store.getPlan(id, board.id)) return { ok: false, error: "ไม่พบแผนนี้แล้ว" };
   const input = parsePlan(form, board.id);
@@ -93,7 +98,8 @@ export async function updatePlan(_prev: PlanFormState, form: FormData): Promise<
 }
 
 export async function deletePlan(id: number) {
-  const { board } = await requireBoard();
+  const { board, viewer } = await requireBoard();
+  if (writeBlocked(viewer, board.id, "plans")) return;
   if (store.getPlan(id, board.id)) store.deletePlan(id);
   revalidatePlans();
   redirect("/plans");
@@ -102,7 +108,9 @@ export async function deletePlan(id: number) {
 // ---------- items ----------
 
 export async function saveItem(_prev: PlanFormState, form: FormData): Promise<PlanFormState> {
-  const { board } = await requireBoard();
+  const { board, viewer } = await requireBoard();
+  const blocked = writeBlocked(viewer, board.id, "plans");
+  if (blocked) return { ok: false, error: blocked };
   const planId = Number(form.get("plan_id"));
   const plan = store.getPlan(planId, board.id);
   if (!plan) return { ok: false, error: "ไม่พบแผนนี้แล้ว" };
@@ -155,9 +163,10 @@ export async function saveItem(_prev: PlanFormState, form: FormData): Promise<Pl
   return { ok: true, at: Date.now() };
 }
 
-/** The item only if its plan is on the viewer's board. */
+/** The item only if its plan is on the viewer's board (and plans can be changed right now). */
 async function itemOnMyBoard(id: number) {
-  const { board } = await requireBoard();
+  const { board, viewer } = await requireBoard();
+  if (writeBlocked(viewer, board.id, "plans")) return null;
   const cur = store.getItem(id);
   return cur && store.getPlan(cur.plan_id, board.id) ? cur : null;
 }
